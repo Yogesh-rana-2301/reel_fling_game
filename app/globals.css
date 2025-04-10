@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Dark Mode (default) */
+  .dark body {
+    @apply bg-dark-primary text-white min-h-screen overflow-x-hidden;
+  }
+
+  /* Light Mode - Updated with new color scheme */
+  .light body {
+    @apply bg-light-primary text-light-text min-h-screen overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-opacity-90 active:scale-95 focus:ring-accent;
+  }
+
+  /* Apply theme variants for primary button */
+  .dark .btn-primary {
+    @apply bg-accent text-white focus:ring-accent;
+  }
+
+  .light .btn-primary {
+    @apply bg-light-accent text-white focus:ring-light-accent;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary text-white hover:bg-opacity-90 active:scale-95;
+  }
+
+  /* Apply theme variants */
+  .dark .btn-secondary {
+    @apply bg-secondary text-white;
+  }
+
+  .light .btn-secondary {
+    @apply bg-light-secondary text-light-text;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-accent text-accent hover:bg-accent hover:text-white active:scale-95;
+  }
+
+  /* Apply theme variants for outline button */
+  .dark .btn-outline {
+    @apply border-accent text-accent hover:bg-accent;
+  }
+
+  .light .btn-outline {
+    @apply border-light-accent text-light-accent hover:bg-light-accent hover:text-white;
+  }
+
+  .btn-disabled {
+    @apply btn bg-gray-700 text-gray-400 cursor-not-allowed;
+  }
+
+  .letter-box {
+    @apply w-12 h-12 sm:w-14 sm:h-14 border-2 border-accent flex items-center justify-center text-2xl font-bold m-1 rounded-md;
+  }
+
+  /* Apply theme variants */
+  .dark .letter-box {
+    @apply bg-secondary border-accent;
+  }
+
+  .light .letter-box {
+    @apply bg-light-secondary border-light-accent;
+  }
+
+  .incorrect-letter {
+    @apply text-danger mx-1 text-xl;
+  }
+
+  /* Error colors by theme */
+  .dark .incorrect-letter {
+    @apply text-danger;
+  }
+
+  .light .incorrect-letter {
+    @apply text-light-error;
+  }
+
+  .word-guesser {
+    @apply text-2xl sm:text-3xl font-bold tracking-wider;
+  }
+
+  .strike-through {
+    @apply relative;
+  }
+
+  .strike-through::after {
+    content: "";
+    @apply absolute top-1/2 left-0 h-0.5 bg-danger w-0;
+    animation: strike 0.5s ease-out forwards;
+  }
+
+  /* Theme variants for strike-through */
+  .dark .strike-through::after {
+    @apply bg-danger;
+  }
+
+  .light .strike-through::after {
+    @apply bg-light-error;
+  }
+
+  @keyframes strike {
+    0% {
+      width: 0;
+    }
+    100% {
+      width: 100%;
+    }
+  }
+
+  /* Game Container - with theme support */
+  .game-container {
+    @apply max-w-4xl mx-auto p-4 rounded-xl shadow-lg transition-all duration-300;
+  }
+
+  /* Apply theme variants */
+  .dark .game-container {
+    @apply bg-secondary bg-opacity-50 backdrop-blur-sm;
+  }
+
+  .light .game-container {
+    @apply bg-white shadow-md border border-light-secondary backdrop-blur-sm;
+  }
+
+  .keyboard-btn {
+    @apply w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center text-lg font-semibold transition-all duration-150;
+  }
+
+  /* Keyboard button themes */
+  .dark .keyboard-btn {
+    @apply bg-secondary text-white hover:bg-accent;
+  }
+
+  .light .keyboard-btn {
+    @apply bg-light-secondary text-light-text hover:bg-light-accent hover:text-white;
+  }
+
+  .genre-btn {
+    @apply px-4 py-2 rounded-lg text-sm sm:text-base transition-colors;
+  }
+
+  .industry-btn {
+    @apply px-3 py-1.5 rounded-lg text-xs sm:text-sm transition-colors;
+  }
+
+  .stat-box {
+    @apply p-3 rounded-lg border transition-all duration-300 hover:border-accent;
+  }
+
+  /* Apply theme variants */
+  .dark .stat-box {
+    @apply bg-gray-800 bg-opacity-50 border-gray-700 hover:border-accent;
+  }
+
+  .light .stat-box {
+    @apply bg-white border-light-secondary hover:border-light-accent;
+  }
+
+  /* Theme transition */
+  * {
+    @apply transition-colors duration-200;
+  }
+}

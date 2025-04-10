@@ -1,0 +1,12 @@
+<svg width="300" height="450" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="450" fill="#2d2d2d" />
+  <text x="150" y="200" font-family="Arial" font-size="24" fill="white" text-anchor="middle" dominant-baseline="middle">
+    Movie Poster
+  </text>
+  <text x="150" y="240" font-family="Arial" font-size="18" fill="#cccccc" text-anchor="middle" dominant-baseline="middle">
+    (Image unavailable)
+  </text>
+  <path d="M100,140 L200,140 L200,280 L100,280 Z" stroke="white" stroke-width="3" fill="none" />
+  <path d="M120,170 L180,170 M120,200 L180,200 M120,230 L180,230 M120,260 L160,260" stroke="white" stroke-width="2" />
+  <path d="M140,110 C140,110 120,125 120,140 M160,110 C160,110 180,125 180,140" stroke="white" stroke-width="2" fill="none" />
+</svg> 
