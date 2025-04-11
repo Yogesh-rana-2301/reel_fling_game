@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FaUser, FaSignOutAlt, FaTimes } from "react-icons/fa";
 import { useSupabase } from "@/app/providers/SupabaseProvider";
 import { toast } from "sonner";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 const AuthButton = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -12,6 +13,8 @@ const AuthButton = () => {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captchaRef = useRef<HCaptcha>(null);
   const { supabase } = useSupabase();
   const [user, setUser] = useState<any>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -47,6 +50,15 @@ const AuthButton = () => {
     }
   }, [supabase]);
 
+  // Reset form when switching between login and signup
+  useEffect(() => {
+    // Reset captcha when switching to signup
+    if (!isLogin && captchaRef.current) {
+      captchaRef.current.resetCaptcha();
+    }
+    setCaptchaToken("");
+  }, [isLogin]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) return;
@@ -69,6 +81,28 @@ const AuthButton = () => {
     }
   };
 
+  const handleCaptchaVerify = (token: string) => {
+    setCaptchaToken(token);
+  };
+
+  const verifyCaptcha = async (token: string) => {
+    try {
+      const response = await fetch("/api/verify-captcha", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = await response.json();
+      return data.success;
+    } catch (error) {
+      console.error("Error verifying captcha:", error);
+      return false;
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) return;
@@ -78,36 +112,67 @@ const AuthButton = () => {
       return;
     }
 
-    setLoading(true);
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username,
-        },
-      },
-    });
-
-    // Create a profile after signup
-    if (data.user) {
-      await supabase.from("profiles").insert({
-        id: data.user.id,
-        username,
-        created_at: new Date().toISOString(),
-      });
+    // Validate captcha for signup
+    if (!isLogin && !captchaToken) {
+      toast.error("Please complete the captcha verification");
+      return;
     }
 
-    setLoading(false);
+    setLoading(true);
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      setShowAuthModal(false);
-      toast.success(
-        "Signed up successfully! Please check your email for verification."
-      );
+    try {
+      // Only verify captcha for signup, not for login
+      if (!isLogin) {
+        const isCaptchaValid = await verifyCaptcha(captchaToken);
+        if (!isCaptchaValid) {
+          setLoading(false);
+          toast.error("Captcha verification failed. Please try again.");
+          if (captchaRef.current) {
+            captchaRef.current.resetCaptcha();
+          }
+          return;
+        }
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+          },
+        },
+      });
+
+      // Create a profile after signup
+      if (data.user) {
+        await supabase.from("profiles").insert({
+          id: data.user.id,
+          username,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      setLoading(false);
+
+      if (error) {
+        toast.error(error.message);
+        if (captchaRef.current) {
+          captchaRef.current.resetCaptcha();
+        }
+      } else {
+        setShowAuthModal(false);
+        toast.success(
+          "Signed up successfully! Please check your email for verification."
+        );
+      }
+    } catch (err) {
+      setLoading(false);
+      toast.error("An error occurred during signup. Please try again.");
+      console.error("Signup error:", err);
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
     }
   };
 
@@ -238,7 +303,7 @@ const AuthButton = () => {
                 />
               </div>
 
-              <div className="mb-6">
+              <div className="mb-4">
                 <label
                   className={`block text-sm font-medium mb-1 ${
                     isDarkMode ? "text-white" : "text-light-text"
@@ -259,6 +324,18 @@ const AuthButton = () => {
                   minLength={6}
                 />
               </div>
+
+              {/* hCaptcha - only show for signup */}
+              {!isLogin && (
+                <div className="mb-4 flex justify-center">
+                  <HCaptcha
+                    sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITEKEY || ""}
+                    onVerify={handleCaptchaVerify}
+                    ref={captchaRef}
+                    theme={isDarkMode ? "dark" : "light"}
+                  />
+                </div>
+              )}
 
               <div className="flex justify-between items-center">
                 <button
