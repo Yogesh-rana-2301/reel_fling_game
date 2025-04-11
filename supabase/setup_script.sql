@@ -1,5 +1,7 @@
 -- This script creates the necessary tables for the Reel Fling game
 -- Use this in Supabase SQL Editor to set up your database
+-- If you are cloning this repo copy and paste this code in your supabase account.
+-- You just have to create an account with your gmail on supabse (its easy). or you can also use firebase (i have learning gaps in that, that is why i am using supabase).
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
