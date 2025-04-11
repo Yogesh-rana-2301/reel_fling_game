@@ -81,28 +81,6 @@ const AuthButton = () => {
     }
   };
 
-  const handleCaptchaVerify = (token: string) => {
-    setCaptchaToken(token);
-  };
-
-  const verifyCaptcha = async (token: string) => {
-    try {
-      const response = await fetch("/api/verify-captcha", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token }),
-      });
-
-      const data = await response.json();
-      return data.success;
-    } catch (error) {
-      console.error("Error verifying captcha:", error);
-      return false;
-    }
-  };
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) return;
@@ -121,19 +99,6 @@ const AuthButton = () => {
     setLoading(true);
 
     try {
-      // Only verify captcha for signup, not for login
-      if (!isLogin) {
-        const isCaptchaValid = await verifyCaptcha(captchaToken);
-        if (!isCaptchaValid) {
-          setLoading(false);
-          toast.error("Captcha verification failed. Please try again.");
-          if (captchaRef.current) {
-            captchaRef.current.resetCaptcha();
-          }
-          return;
-        }
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -141,6 +106,7 @@ const AuthButton = () => {
           data: {
             username,
           },
+          captchaToken: captchaToken,
         },
       });
 
@@ -330,7 +296,7 @@ const AuthButton = () => {
                 <div className="mb-4 flex justify-center">
                   <HCaptcha
                     sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITEKEY || ""}
-                    onVerify={handleCaptchaVerify}
+                    onVerify={(token) => setCaptchaToken(token)}
                     ref={captchaRef}
                     theme={isDarkMode ? "dark" : "light"}
                   />
