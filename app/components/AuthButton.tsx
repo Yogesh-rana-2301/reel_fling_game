@@ -329,7 +329,7 @@ const AuthButton = () => {
               {!isLogin && (
                 <div className="mb-4 flex justify-center">
                   <HCaptcha
-                    sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITEKEY || ""}
+                    sitekey={process.env.HCAPTCHA_SITEKEY || ""}
                     onVerify={handleCaptchaVerify}
                     ref={captchaRef}
                     theme={isDarkMode ? "dark" : "light"}
