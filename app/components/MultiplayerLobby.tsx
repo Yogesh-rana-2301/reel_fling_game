@@ -12,10 +12,13 @@ import {
   updatePlayerActivity,
   kickInactivePlayers,
 } from "@/app/lib/supabaseHelpers";
+import MultiplayerGame from "./MultiplayerGame";
+import MultiplayerResults from "./MultiplayerResults";
+import { FaTimes } from "react-icons/fa";
 
 // Placeholder components until we implement them properly
-const MultiplayerGamePlaceholder = () => <div>Game Component</div>;
-const MultiplayerResultsPlaceholder = () => <div>Results Component</div>;
+const MultiplayerGamePlaceholder = () => <MultiplayerGame />;
+const MultiplayerResultsPlaceholder = () => <MultiplayerResults />;
 
 export default function MultiplayerLobby() {
   const [playerName, setPlayerName] = useState("");
@@ -28,6 +31,7 @@ export default function MultiplayerLobby() {
     players,
     gameStatus,
     difficulty,
+    totalRounds,
     setLobbyId,
     setIsHost,
     addPlayer,
@@ -38,6 +42,7 @@ export default function MultiplayerLobby() {
     resetGame,
     exitLobby,
     setDifficulty,
+    setTotalRounds,
     removePlayer,
   } = useMultiplayerStore();
 
@@ -117,6 +122,12 @@ export default function MultiplayerLobby() {
 
   // Handle player ready status change
   const toggleReady = async (playerId: string) => {
+    // Only allow toggling ready status for the active player (self)
+    if (playerId !== activePlayerId) {
+      toast.error("You can only set your own ready status");
+      return;
+    }
+
     // Find the player to toggle
     const player = players.find((p) => p.id === playerId);
     if (!player) return;
@@ -151,6 +162,39 @@ export default function MultiplayerLobby() {
 
       // Still update local state for better user experience
       setPlayerReady(playerId, !player.isReady);
+    }
+  };
+
+  // Kick player (host only)
+  const kickPlayer = async (playerId: string) => {
+    if (!isHost || !supabase || !lobbyId) return;
+
+    try {
+      // Don't allow kicking yourself
+      if (playerId === activePlayerId) {
+        toast.error("You cannot kick yourself");
+        return;
+      }
+
+      const playerToKick = players.find((p) => p.id === playerId);
+      if (!playerToKick) return;
+
+      // Remove from Supabase
+      await safeSupabaseOperation(supabase, async (db) => {
+        return db
+          .from("lobby_players")
+          .delete()
+          .eq("player_id", playerId)
+          .eq("lobby_code", lobbyId);
+      });
+
+      // Remove from local state
+      removePlayer(playerId);
+
+      toast.success(`Kicked ${playerToKick.name} from the lobby`);
+    } catch (err) {
+      console.error("Error kicking player:", err);
+      toast.error("Failed to kick player");
     }
   };
 
@@ -415,14 +459,21 @@ export default function MultiplayerLobby() {
           .eq("code", lobbyId);
       });
 
-      // Fetch a random movie
-      let movie = await getRandomTMDBMovie();
-      if (!movie) {
-        movie = getRandomMockMovie();
+      // Fetch random movies for all rounds in advance
+      const movies = [];
+      for (let i = 0; i < totalRounds; i++) {
+        let movie = await getRandomTMDBMovie(difficulty);
+        if (!movie) {
+          movie = getRandomMockMovie("All", "Hollywood", difficulty);
+        }
+        movies.push(movie);
       }
 
-      // Update game with selected movie
-      setCurrentMovie(movie);
+      // Set first movie as current movie
+      setCurrentMovie(movies[0]);
+
+      // Store all movies for rounds
+      useMultiplayerStore.setState({ roundMovies: movies });
 
       // Start the actual game after 3 seconds
       setTimeout(() => {
@@ -481,6 +532,7 @@ export default function MultiplayerLobby() {
               onChange={(e) => setPlayerName(e.target.value)}
               className="w-full p-2 bg-gray-800 border border-gray-700 rounded focus:ring-green-500 focus:border-green-500"
               placeholder="Enter your name"
+              required
             />
           </div>
 
@@ -563,21 +615,48 @@ export default function MultiplayerLobby() {
           {/* Difficulty selection (host only) */}
           {isHost && (
             <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">Select Difficulty</h2>
-              <div className="flex flex-wrap gap-2">
-                {["easy", "medium", "hard"].map((level) => (
-                  <motion.button
-                    key={level}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setDifficulty(level as any)}
-                    className={`genre-btn ${
-                      difficulty === level ? "bg-green-600" : "bg-secondary"
-                    }`}
-                  >
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </motion.button>
-                ))}
+              <h2 className="text-lg font-semibold mb-2">Game Settings</h2>
+
+              {/* Difficulty selection */}
+              <div className="mb-4">
+                <h3 className="text-md font-medium mb-2">Difficulty</h3>
+                <div className="flex flex-wrap gap-2">
+                  {["easy", "medium", "hard"].map((level) => (
+                    <motion.button
+                      key={level}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setDifficulty(level as any)}
+                      className={`genre-btn ${
+                        difficulty === level ? "bg-green-600" : "bg-secondary"
+                      }`}
+                    >
+                      {level.charAt(0).toUpperCase() + level.slice(1)}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Number of rounds selection */}
+              <div>
+                <h3 className="text-md font-medium mb-2">Number of Rounds</h3>
+                <div className="flex flex-wrap gap-2">
+                  {[3, 5, 7].map((numRounds) => (
+                    <motion.button
+                      key={numRounds}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setTotalRounds(numRounds)}
+                      className={`genre-btn ${
+                        totalRounds === numRounds
+                          ? "bg-green-600"
+                          : "bg-secondary"
+                      }`}
+                    >
+                      {numRounds}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -603,25 +682,53 @@ export default function MultiplayerLobby() {
                         }`}
                       />
                       <span className="font-medium">{player.name}</span>
-                      {isHost && player.id === players[0]?.id && (
+                      {player.id === players[0]?.id && isHost && (
                         <span className="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full">
                           Host
                         </span>
                       )}
                     </div>
 
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => toggleReady(player.id)}
-                      className={`text-sm px-3 py-1 rounded ${
-                        player.isReady
-                          ? "bg-green-900 text-green-300"
-                          : "bg-yellow-900 text-yellow-300"
-                      }`}
-                    >
-                      {player.isReady ? "Ready" : "Not Ready"}
-                    </motion.button>
+                    <div className="flex items-center">
+                      {/* Only show ready button for the active player */}
+                      {player.id === activePlayerId ? (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => toggleReady(player.id)}
+                          className={`text-sm px-3 py-1 rounded mr-2 ${
+                            player.isReady
+                              ? "bg-green-900 text-green-300"
+                              : "bg-yellow-900 text-yellow-300"
+                          }`}
+                        >
+                          {player.isReady ? "Ready" : "Not Ready"}
+                        </motion.button>
+                      ) : (
+                        <span
+                          className={`text-sm px-3 py-1 rounded mr-2 ${
+                            player.isReady
+                              ? "bg-green-900 text-green-300"
+                              : "bg-yellow-900 text-yellow-300"
+                          }`}
+                        >
+                          {player.isReady ? "Ready" : "Not Ready"}
+                        </span>
+                      )}
+
+                      {/* Kick button - only visible to host and not for their own player */}
+                      {isHost && player.id !== activePlayerId && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => kickPlayer(player.id)}
+                          className="text-red-500 hover:text-red-400 p-1 ml-1"
+                          title="Kick player"
+                        >
+                          <FaTimes />
+                        </motion.button>
+                      )}
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>

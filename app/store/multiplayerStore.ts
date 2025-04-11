@@ -31,6 +31,10 @@ interface MultiplayerState {
   };
   gameStatus: "lobby" | "countdown" | "playing" | "ended";
   showResults: boolean;
+  // New round settings
+  currentRound: number;
+  totalRounds: number;
+  roundMovies: Movie[];
 
   // Actions
   setLobbyId: (lobbyId: string | null) => void;
@@ -48,6 +52,8 @@ interface MultiplayerState {
   exitLobby: () => void;
   setShowResults: (show: boolean) => void;
   setDifficulty: (difficulty: "easy" | "medium" | "hard") => void;
+  setTotalRounds: (rounds: number) => void;
+  moveToNextRound: () => void;
 }
 
 export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
@@ -66,6 +72,10 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
   },
   gameStatus: "lobby",
   showResults: false,
+  // New round state
+  currentRound: 0,
+  totalRounds: 3, // Default to 3 rounds
+  roundMovies: [],
 
   // Actions
   setLobbyId: (lobbyId) => set({ lobbyId }),
@@ -115,6 +125,7 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
     set((state) => ({
       gameStatus: "playing",
       gameTimer: gameTime,
+      currentRound: 0,
       players: state.players.map((player) => {
         // First create the display title string with proper typing
         let newDisplayTitle = "";
@@ -162,12 +173,23 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
           });
 
           clearInterval(timer);
-          return {
-            gameTimer: 0,
-            gameStatus: "ended",
-            players: updatedPlayers,
-            showResults: true,
-          };
+
+          // Check if this was the last round
+          if (state.currentRound >= state.totalRounds - 1) {
+            return {
+              gameTimer: 0,
+              gameStatus: "ended",
+              players: updatedPlayers,
+              showResults: true,
+            };
+          } else {
+            // Move to next round automatically
+            get().moveToNextRound();
+            return {
+              gameTimer: 0,
+              players: updatedPlayers,
+            };
+          }
         }
 
         // Continue timer
@@ -177,7 +199,7 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
   },
 
   guessLetter: (playerId, letter) => {
-    const { currentMovie, players } = get();
+    const { currentMovie, players, difficulty } = get();
     if (!currentMovie) return;
 
     const playerIndex = players.findIndex((p) => p.id === playerId);
@@ -231,11 +253,29 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
       // If player won, update rankings
       if (hasWon) {
         get().updateRankings();
+
+        // Check if all players have completed
+        const { players: updatedPlayers, currentRound, totalRounds } = get();
+        const allCompleted = updatedPlayers.every(
+          (p) => p.gameStatus === "won" || p.gameStatus === "lost"
+        );
+
+        if (allCompleted) {
+          // If all players finished and this is the last round, end the game
+          if (currentRound >= totalRounds - 1) {
+            set({ gameStatus: "ended", showResults: true });
+          } else {
+            // Otherwise move to the next round
+            get().moveToNextRound();
+          }
+        }
       }
     } else {
       // Incorrect guess
       const newStrikes = player.strikes + 1;
-      const hasLost = newStrikes >= 8; // Assuming 8 strikes allowed (FILMQUIZ)
+      const maxStrikes =
+        difficulty === "easy" ? 8 : difficulty === "medium" ? 5 : 4;
+      const hasLost = newStrikes >= maxStrikes;
 
       set((state) => ({
         players: state.players.map((p, index) =>
@@ -250,16 +290,24 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
             : p
         ),
       }));
-    }
 
-    // Check if all players have completed
-    const { players: updatedPlayers } = get();
-    const allCompleted = updatedPlayers.every(
-      (p) => p.gameStatus === "won" || p.gameStatus === "lost"
-    );
+      // If player lost, check if all players have completed
+      if (hasLost) {
+        const { players: updatedPlayers, currentRound, totalRounds } = get();
+        const allCompleted = updatedPlayers.every(
+          (p) => p.gameStatus === "won" || p.gameStatus === "lost"
+        );
 
-    if (allCompleted) {
-      set({ gameStatus: "ended", showResults: true });
+        if (allCompleted) {
+          // If all players finished and this is the last round, end the game
+          if (currentRound >= totalRounds - 1) {
+            set({ gameStatus: "ended", showResults: true });
+          } else {
+            // Otherwise move to the next round
+            get().moveToNextRound();
+          }
+        }
+      }
     }
   },
 
@@ -335,4 +383,102 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
   setShowResults: (show) => set({ showResults: show }),
 
   setDifficulty: (difficulty) => set({ difficulty }),
+
+  // Set the total number of rounds
+  setTotalRounds: (rounds) => set({ totalRounds: rounds }),
+
+  // Move to the next round
+  moveToNextRound: () => {
+    const { currentRound, totalRounds, roundMovies } = get();
+
+    // If all rounds completed, end the game
+    if (currentRound >= totalRounds - 1) {
+      set({ gameStatus: "ended", showResults: true });
+      return;
+    }
+
+    // Move to next round
+    const nextRound = currentRound + 1;
+    const nextMovie = roundMovies[nextRound];
+
+    // Initialize next round
+    set((state) => ({
+      currentRound: nextRound,
+      currentMovie: nextMovie,
+      gameTimer: state.timerConfig[state.difficulty],
+      players: state.players.map((player) => {
+        // Create display title for the new movie
+        let newDisplayTitle = "";
+        if (nextMovie?.title) {
+          newDisplayTitle = nextMovie.title
+            .split("")
+            .map((letter) => {
+              // Show vowels, spaces, and special characters
+              if (
+                "AEIOU".includes(letter.toUpperCase()) ||
+                !letter.match(/[A-Z]/i)
+              ) {
+                return letter;
+              }
+              return "_";
+            })
+            .join("");
+        }
+
+        return {
+          ...player,
+          displayTitle: newDisplayTitle,
+          incorrectLetters: [],
+          guessedLetters: [],
+          strikes: 0,
+          gameStatus: "playing",
+          completionTime: null,
+          rank: null,
+        };
+      }),
+    }));
+
+    // Start the timer for the new round
+    const { timerConfig, difficulty } = get();
+    const gameTime = timerConfig[difficulty];
+
+    // Start game timer
+    const timer = setInterval(() => {
+      set((state) => {
+        const newTimer = (state.gameTimer || 0) - 1;
+
+        if (newTimer <= 0) {
+          // Update all players who haven't finished yet to "lost"
+          const updatedPlayers = state.players.map((player) => {
+            if (player.gameStatus === "playing") {
+              return { ...player, gameStatus: "lost" as const };
+            }
+            return player;
+          });
+
+          clearInterval(timer);
+
+          // Check if this was the last round
+          if (state.currentRound >= state.totalRounds - 1) {
+            return {
+              gameTimer: 0,
+              gameStatus: "ended",
+              players: updatedPlayers,
+              showResults: true,
+            };
+          } else {
+            // Move to next round automatically
+            get().moveToNextRound();
+            return {
+              gameTimer: 0,
+              players: updatedPlayers,
+            };
+          }
+        }
+
+        // Continue timer
+        return { gameTimer: newTimer };
+      });
+    }, 1000);
+  },
 }));
