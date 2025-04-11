@@ -66,8 +66,8 @@ export const useMultiplayerStore = create<MultiplayerState>((set, get) => ({
   gameTimer: null,
   difficulty: "medium",
   timerConfig: {
-    easy: 60, // 1 minute
-    medium: 60, // 1 minute
+    easy: 180, // 3 minutes
+    medium: 120, // 2 minutes
     hard: 60, // 1 minute
   },
   gameStatus: "lobby",
