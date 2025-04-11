@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-// Tell Next.js this route is dynamic
+// Must be at the top, before any other exports
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
