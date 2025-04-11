@@ -5,6 +5,8 @@ import { Inter, Montserrat } from "next/font/google";
 import { SupabaseProvider } from "@/app/providers/SupabaseProvider";
 import { ThemeProvider } from "@/app/providers/ThemeProvider";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,6 +39,8 @@ export default function RootLayout({
               </footer>
             </div>
             <Toaster position="top-center" />
+            <Analytics />
+            <SpeedInsights />
           </ThemeProvider>
         </SupabaseProvider>
       </body>

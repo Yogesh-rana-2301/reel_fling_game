@@ -54,7 +54,8 @@ export const getRandomMovie = async (
   supabase: ReturnType<typeof createSupabaseClient>,
   genre: string = "All",
   industry: string = "Hollywood",
-  difficulty: "easy" | "medium" | "hard" = "medium"
+  difficulty: "easy" | "medium" | "hard" = "medium",
+  userId?: string
 ) => {
   let query = supabase.from("movies").select("*");
 
@@ -68,7 +69,7 @@ export const getRandomMovie = async (
 
   query = query.eq("difficulty", difficulty);
 
-  // Get random row
+  // Get up to 100 matching movies
   const { data, error } = await query.limit(100);
 
   if (error) {
@@ -80,9 +81,100 @@ export const getRandomMovie = async (
     return null;
   }
 
-  // Pick a random movie from the results
+  // If user is logged in, prioritize unseen movies
+  if (userId) {
+    try {
+      // Get recently played movies (last 10)
+      const { data: recentGames } = await supabase
+        .from("game_sessions")
+        .select("movie_id")
+        .eq("user_id", userId)
+        .order("start_time", { ascending: false })
+        .limit(10);
+
+      const recentMovieIds = recentGames?.map((game) => game.movie_id) || [];
+
+      // Filter out movies that haven't been played recently
+      const unseenMovies = data.filter(
+        (movie) => !recentMovieIds.includes(movie.id)
+      );
+
+      // If we have unseen movies, pick from those, otherwise use all movies
+      if (unseenMovies.length > 0) {
+        const randomIndex = Math.floor(Math.random() * unseenMovies.length);
+        return unseenMovies[randomIndex] as Movie;
+      }
+    } catch (err) {
+      console.error("Error fetching recent games:", err);
+      // Fall back to random selection if there's an error
+    }
+  }
+
+  // For non-logged in users or if no unseen movies are available, pick a random movie
   const randomIndex = Math.floor(Math.random() * data.length);
   return data[randomIndex] as Movie;
+};
+
+// Track played movie
+export const trackPlayedMovie = async (
+  supabase: ReturnType<typeof createSupabaseClient>,
+  userId: string,
+  movieId: number,
+  difficulty: string,
+  status: "in_progress" | "won" | "lost" = "in_progress"
+) => {
+  try {
+    const { data, error } = await supabase
+      .from("game_sessions")
+      .insert({
+        user_id: userId,
+        movie_id: movieId,
+        start_time: new Date().toISOString(),
+        status: status,
+        difficulty: difficulty,
+        incorrect_guesses: [],
+        guessed_letters: [],
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Error tracking played movie:", error);
+      return null;
+    }
+
+    return data.id;
+  } catch (err) {
+    console.error("Error in trackPlayedMovie:", err);
+    return null;
+  }
+};
+
+// Update game session status
+export const updateGameSession = async (
+  supabase: ReturnType<typeof createSupabaseClient>,
+  sessionId: string,
+  status: "won" | "lost",
+  incorrectGuesses: string[] = [],
+  guessedLetters: string[] = []
+) => {
+  try {
+    const { error } = await supabase
+      .from("game_sessions")
+      .update({
+        status: status,
+        end_time: new Date().toISOString(),
+        incorrect_guesses: incorrectGuesses,
+        guessed_letters: guessedLetters,
+      })
+      .eq("id", sessionId);
+
+    if (error) {
+      console.error("Error updating game session:", error);
+    }
+  } catch (err) {
+    console.error("Error in updateGameSession:", err);
+  }
 };
 
 // Update user profile after game

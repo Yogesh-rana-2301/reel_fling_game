@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BsQuestionCircleFill, BsTrophy } from "react-icons/bs";
 import { useGameStore } from "@/app/store/gameStore";
 import { useSupabase } from "@/app/providers/SupabaseProvider";
-import { getRandomMovie, updateUserAfterGame } from "@/app/lib/supabase";
+import {
+  getRandomMovie,
+  updateUserAfterGame,
+  trackPlayedMovie,
+  updateGameSession,
+} from "@/app/lib/supabase";
 import { getRandomMockMovie } from "@/app/lib/mockData";
 import Image from "next/image";
 import Confetti from "react-confetti";
@@ -41,7 +46,9 @@ export default function Game() {
     showLeaderboard,
   } = useGameStore();
 
-  const { supabase } = useSupabase();
+  const { supabase, user } = useSupabase();
+
+  const [gameSessionId, setGameSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentMovie) return;
@@ -57,6 +64,20 @@ export default function Game() {
         difficulty
       );
 
+      // Update game session if it exists
+      if (supabase && user && gameSessionId) {
+        updateGameSession(
+          supabase,
+          gameSessionId,
+          gameStatus,
+          incorrectLetters,
+          guessedLetters
+        );
+
+        // Update user stats as well
+        updateUserAfterGame(supabase, user.id, gameStatus === "won");
+      }
+
       // Show poster after a short delay
       const timer = setTimeout(() => {
         showPoster();
@@ -71,12 +92,16 @@ export default function Game() {
     incorrectLetters,
     difficulty,
     showPoster,
+    supabase,
+    user,
+    gameSessionId,
   ]);
 
   // Handle start game
   const handleStartGame = async () => {
     // Show loading state
     setIsLoading(true);
+    setGameSessionId(null);
 
     try {
       // Try to fetch from TMDB first
@@ -84,21 +109,47 @@ export default function Game() {
       if (tmdbMovie) {
         setCurrentMovie(tmdbMovie);
         initializeGame();
+
+        // Track the game session if user is logged in
+        if (supabase && user) {
+          const sessionId = await trackPlayedMovie(
+            supabase,
+            user.id,
+            tmdbMovie.id,
+            difficulty
+          );
+          setGameSessionId(sessionId);
+        }
+
         setIsLoading(false);
         return;
       }
 
       // If TMDB fails or is not available, try Supabase
       if (supabase) {
+        // Pass the user ID if available to avoid recent movies
         const movie = await getRandomMovie(
           supabase,
           genre,
           industry,
-          difficulty
+          difficulty,
+          user?.id
         );
         if (movie) {
           setCurrentMovie(movie);
           initializeGame();
+
+          // Track the game session if user is logged in
+          if (user) {
+            const sessionId = await trackPlayedMovie(
+              supabase,
+              user.id,
+              movie.id,
+              difficulty
+            );
+            setGameSessionId(sessionId);
+          }
+
           setIsLoading(false);
           return;
         }
@@ -345,7 +396,7 @@ export default function Game() {
                   return (
                     <div
                       key={index}
-                      className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center"
+                      className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 flex items-center justify-center"
                     ></div>
                   );
                 }
@@ -356,7 +407,7 @@ export default function Game() {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    className={`letter-box ${
+                    className={`letter-box text-sm sm:text-base md:text-lg w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 ${
                       letter !== "_" ? "correct-letter" : ""
                     }`}
                   >
@@ -369,7 +420,7 @@ export default function Game() {
             {/* Word Guesser with strike-through effect for FILMQUIZ */}
             <div className="flex flex-col items-center justify-center">
               <p className="text-sm text-gray-400 mb-1">Remaining Chances:</p>
-              <div className="word-guesser">
+              <div className="word-guesser text-sm sm:text-base md:text-lg">
                 {difficulty === "easy" && (
                   <>
                     {wordGuesser.split("").map((letter, index) => (
@@ -515,7 +566,7 @@ export default function Game() {
               <HintButton onUseHint={handleUseHint} />
 
               {/* Existing keyboard */}
-              <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
+              <div className="flex flex-wrap justify-center gap-1 sm:gap-2 max-w-xl mx-auto">
                 {Array.from("BCDFGHJKLMNPQRSTVWXYZ").map((letter) => {
                   const isGuessed =
                     incorrectLetters.includes(letter) ||
@@ -528,7 +579,7 @@ export default function Game() {
                       whileTap={!isGuessed ? { scale: 0.9 } : {}}
                       disabled={isGuessed}
                       onClick={() => guessLetter(letter)}
-                      className={`keyboard-btn ${
+                      className={`keyboard-btn text-xs sm:text-sm md:text-base w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 ${
                         isGuessed
                           ? incorrectLetters.includes(letter)
                             ? "wrong-letter cursor-not-allowed opacity-60"

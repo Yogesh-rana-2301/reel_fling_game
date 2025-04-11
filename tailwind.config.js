@@ -21,7 +21,7 @@ module.exports = {
         light: {
           primary: "#AAC4E7", // Start of gradient
           secondary: "#F24455", // Second color in gradient
-          text: "#b6b8b6", // White text
+          text: "#9B49AD", // White text
           accent: "#FF7A24", // Vibrant orange
           success: "#4CAF50", // Green for success/confirmation
           error: "#E53935", // Bright red for errors/warnings
