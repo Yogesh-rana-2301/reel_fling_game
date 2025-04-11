@@ -1,6 +1,7 @@
 # Reel Fling - Movie Guessing Game
 
 [reel-fling-game.vercel.app](https://reel-fling-game.vercel.app)
+![Alt text](http://reel-fling-game.vercel.app "reel-fling-game")
 
 Want to watch new movies, but tired of searching for new ones everytime? Or do you think you are a movie geek?
 
