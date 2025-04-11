@@ -15,6 +15,10 @@ import {
 import MultiplayerGame from "./MultiplayerGame";
 import MultiplayerResults from "./MultiplayerResults";
 import { FaTimes } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+
+// Import the Movie type from the correct location
+import { Movie } from "@/app/lib/supabase";
 
 // Placeholder components until we implement them properly
 const MultiplayerGamePlaceholder = () => <MultiplayerGame />;
@@ -24,6 +28,7 @@ export default function MultiplayerLobby() {
   const [playerName, setPlayerName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
+  const router = useRouter();
 
   const {
     lobbyId,
@@ -52,42 +57,109 @@ export default function MultiplayerLobby() {
   useEffect(() => {
     if (!lobbyId || !activePlayerId) return;
 
-    // Subscribe to lobby updates
-    const subscription = subscribeToLobby(supabase, lobbyId, (newPlayers) => {
-      // Update the local players list if needed
-      if (newPlayers) {
-        // This is a simplification - you might need more complex logic
-        // to merge the players from Supabase with your local state
-        newPlayers.forEach((player) => {
-          const existingPlayer = players.find((p) => p.id === player.player_id);
-          if (!existingPlayer) {
-            addPlayer({
-              id: player.player_id,
-              name: player.name,
-              isReady: player.is_ready,
-              displayTitle: player.display_title || "",
-              incorrectLetters: player.incorrect_letters || [],
-              guessedLetters: player.guessed_letters || [],
-              strikes: player.strikes || 0,
-              gameStatus: player.game_status || "idle",
-              completionTime: player.completion_time,
-              rank: player.rank,
-            });
-          } else if (existingPlayer.isReady !== player.is_ready) {
-            setPlayerReady(player.player_id, player.is_ready);
-          }
-        });
+    let lobbyStatusSubscription: any = null;
 
-        // Handle removed players
-        players.forEach((player) => {
-          const stillExists = newPlayers.some((p) => p.player_id === player.id);
-          if (!stillExists && player.id !== activePlayerId) {
-            removePlayer(player.id);
-            toast.info(`${player.name} has left the lobby`);
-          }
-        });
+    // Subscribe to lobby updates
+    const playerSubscription = subscribeToLobby(
+      supabase,
+      lobbyId,
+      (newPlayers) => {
+        // Update the local players list if needed
+        if (newPlayers) {
+          // This is a simplification - you might need more complex logic
+          // to merge the players from Supabase with your local state
+          newPlayers.forEach((player) => {
+            const existingPlayer = players.find(
+              (p) => p.id === player.player_id
+            );
+            if (!existingPlayer) {
+              addPlayer({
+                id: player.player_id,
+                name: player.name,
+                isReady: player.is_ready,
+                displayTitle: player.display_title || "",
+                incorrectLetters: player.incorrect_letters || [],
+                guessedLetters: player.guessed_letters || [],
+                strikes: player.strikes || 0,
+                gameStatus: player.game_status || "idle",
+                completionTime: player.completion_time,
+                rank: player.rank,
+              });
+            } else if (existingPlayer.isReady !== player.is_ready) {
+              setPlayerReady(player.player_id, player.is_ready);
+            }
+          });
+
+          // Handle removed players
+          players.forEach((player) => {
+            const stillExists = newPlayers.some(
+              (p) => p.player_id === player.id
+            );
+            if (!stillExists && player.id !== activePlayerId) {
+              removePlayer(player.id);
+              toast.info(`${player.name} has left the lobby`);
+            }
+          });
+        }
       }
-    });
+    );
+
+    // Subscribe to lobby status changes
+    if (supabase) {
+      lobbyStatusSubscription = supabase
+        .channel(`lobby-status-${lobbyId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "lobbies",
+            filter: `code=eq.${lobbyId}`,
+          },
+          (payload) => {
+            console.log("Lobby status changed:", payload);
+            const newStatus = payload.new.status;
+            const currentMovieId = payload.new.current_movie_id;
+            const roundNumber = payload.new.round_number;
+
+            if (newStatus === "countdown" && gameStatus !== "countdown") {
+              startCountdown();
+              // Start the actual game after 3 seconds
+              setTimeout(() => {
+                startGame();
+              }, 3000);
+            } else if (newStatus === "playing" && gameStatus !== "playing") {
+              startGame();
+
+              // Sync current movie if provided
+              if (currentMovieId) {
+                // Fetch the movie details and set it
+                const fetchMovie = async () => {
+                  try {
+                    // Fetch movie details using the ID
+                    // This would need to be implemented based on your movie fetching mechanism
+                    const currentRoundMovies =
+                      useMultiplayerStore.getState().roundMovies;
+                    if (
+                      currentRoundMovies &&
+                      currentRoundMovies.length > roundNumber - 1
+                    ) {
+                      setCurrentMovie(currentRoundMovies[roundNumber - 1]);
+                    }
+                  } catch (err) {
+                    console.error("Error fetching current movie:", err);
+                  }
+                };
+
+                fetchMovie();
+              }
+            } else if (newStatus === "ended" && gameStatus !== "ended") {
+              useMultiplayerStore.setState({ gameStatus: "ended" });
+            }
+          }
+        )
+        .subscribe();
+    }
 
     // Setup activity tracking interval
     const activityInterval = setInterval(() => {
@@ -112,13 +184,14 @@ export default function MultiplayerLobby() {
     updatePlayerActivity(supabase, activePlayerId, lobbyId);
 
     return () => {
-      subscription?.unsubscribe();
+      playerSubscription?.unsubscribe();
+      if (lobbyStatusSubscription) lobbyStatusSubscription.unsubscribe();
       clearInterval(activityInterval);
       if (inactiveCheckInterval) {
         clearInterval(inactiveCheckInterval);
       }
     };
-  }, [lobbyId, activePlayerId, isHost, players, supabase]);
+  }, [lobbyId, activePlayerId, isHost, players, supabase, gameStatus]);
 
   // Handle player ready status change
   const toggleReady = async (playerId: string) => {
@@ -223,6 +296,7 @@ export default function MultiplayerLobby() {
             created_at: new Date().toISOString(),
             status: "waiting",
             difficulty: difficulty,
+            round_number: 1,
           });
         });
 
@@ -356,7 +430,8 @@ export default function MultiplayerLobby() {
 
         if (error || !lobby) {
           console.error("Supabase error checking lobby:", error);
-          localOnly = true;
+          toast.error("Lobby not found. Check the code and try again.");
+          return;
         } else {
           lobbyExists = true;
         }
@@ -448,19 +523,8 @@ export default function MultiplayerLobby() {
     }
 
     try {
-      // Start countdown for all players
-      startCountdown();
-
-      // Update lobby status in Supabase
-      await safeSupabaseOperation(supabase, async (db) => {
-        return db
-          .from("lobbies")
-          .update({ status: "countdown" })
-          .eq("code", lobbyId);
-      });
-
       // Fetch random movies for all rounds in advance
-      const movies = [];
+      const movies: Movie[] = [];
       for (let i = 0; i < totalRounds; i++) {
         let movie = await getRandomTMDBMovie(difficulty);
         if (!movie) {
@@ -475,13 +539,61 @@ export default function MultiplayerLobby() {
       // Store all movies for rounds
       useMultiplayerStore.setState({ roundMovies: movies });
 
-      // Start the actual game after 3 seconds
+      // Start countdown for all players
+      startCountdown();
+
+      // Update lobby status in Supabase to trigger the game start for all clients
+      await safeSupabaseOperation(supabase, async (db) => {
+        return db
+          .from("lobbies")
+          .update({
+            status: "countdown",
+            current_movie_id: movies[0].id,
+            round_number: 1,
+            round_movies: movies.map((m) => m.id).join(","),
+          })
+          .eq("code", lobbyId);
+      });
+
+      // Start the actual game after 3 seconds locally
       setTimeout(() => {
         startGame();
+
+        // Update lobby status to playing
+        safeSupabaseOperation(supabase, async (db) => {
+          return db
+            .from("lobbies")
+            .update({ status: "playing" })
+            .eq("code", lobbyId);
+        });
       }, 3000);
     } catch (err) {
       console.error("Error starting game:", err);
       toast.error("Failed to start game");
+    }
+  };
+
+  // Return to lobby (during game)
+  const returnToLobby = async () => {
+    try {
+      if (isHost && supabase && lobbyId) {
+        // If host, update lobby status for all clients
+        await safeSupabaseOperation(supabase, async (db) => {
+          return db
+            .from("lobbies")
+            .update({ status: "waiting" })
+            .eq("code", lobbyId);
+        });
+      }
+
+      // Reset game state locally
+      resetGame();
+    } catch (err) {
+      console.error("Error returning to lobby:", err);
+      toast.error("Failed to return to lobby");
+
+      // Still reset local state for better UX
+      resetGame();
     }
   };
 
@@ -490,6 +602,19 @@ export default function MultiplayerLobby() {
     return (
       <>
         <MultiplayerGamePlaceholder />
+
+        {/* Return to lobby button during game */}
+        <div className="fixed bottom-4 left-4 z-50">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={returnToLobby}
+            className="btn-secondary"
+          >
+            Return to Lobby
+          </motion.button>
+        </div>
+
         {activePlayerId && (
           <LobbyChat
             lobbyCode={lobbyId as string}
@@ -505,7 +630,23 @@ export default function MultiplayerLobby() {
 
   // If game ended, show results
   if (gameStatus === "ended") {
-    return <MultiplayerResultsPlaceholder />;
+    return (
+      <>
+        <MultiplayerResultsPlaceholder />
+
+        {/* Return to lobby button after game ends */}
+        <div className="fixed bottom-4 left-4 z-50">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={returnToLobby}
+            className="btn-secondary"
+          >
+            Return to Lobby
+          </motion.button>
+        </div>
+      </>
+    );
   }
 
   // Default: show lobby
@@ -682,11 +823,14 @@ export default function MultiplayerLobby() {
                         }`}
                       />
                       <span className="font-medium">{player.name}</span>
-                      {player.id === players[0]?.id && isHost && (
-                        <span className="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full">
-                          Host
-                        </span>
-                      )}
+                      {/* Show host badge only once for the first player */}
+                      {player.id === players[0]?.id &&
+                        isHost &&
+                        player.id === activePlayerId && (
+                          <span className="ml-2 text-xs bg-green-600 px-2 py-0.5 rounded-full">
+                            Host
+                          </span>
+                        )}
                     </div>
 
                     <div className="flex items-center">
