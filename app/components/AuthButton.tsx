@@ -52,8 +52,8 @@ const AuthButton = () => {
 
   // Reset form when switching between login and signup
   useEffect(() => {
-    // Reset captcha when switching to signup
-    if (!isLogin && captchaRef.current) {
+    // Reset captcha when switching between login and signup
+    if (captchaRef.current) {
       captchaRef.current.resetCaptcha();
     }
     setCaptchaToken("");
@@ -63,17 +63,29 @@ const AuthButton = () => {
     e.preventDefault();
     if (!supabase) return;
 
+    // Validate captcha for login
+    if (!captchaToken) {
+      toast.error("Please complete the captcha verification");
+      return;
+    }
+
     setLoading(true);
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: {
+        captchaToken: captchaToken,
+      },
     });
 
     setLoading(false);
 
     if (error) {
       toast.error(error.message);
+      if (captchaRef.current) {
+        captchaRef.current.resetCaptcha();
+      }
     } else {
       setUser(data.user);
       setShowAuthModal(false);
@@ -147,6 +159,7 @@ const AuthButton = () => {
 
     await supabase.auth.signOut();
     setUser(null);
+    setCaptchaToken("");
     toast.success("Logged out successfully!");
   };
 
@@ -291,17 +304,15 @@ const AuthButton = () => {
                 />
               </div>
 
-              {/* hCaptcha - only show for signup */}
-              {!isLogin && (
-                <div className="mb-4 flex justify-center">
-                  <HCaptcha
-                    sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITEKEY || ""}
-                    onVerify={(token) => setCaptchaToken(token)}
-                    ref={captchaRef}
-                    theme={isDarkMode ? "dark" : "light"}
-                  />
-                </div>
-              )}
+              {/* hCaptcha - show for both login and signup */}
+              <div className="mb-4 flex justify-center">
+                <HCaptcha
+                  sitekey={process.env.NEXT_PUBLIC_HCAPTCHA_SITEKEY || ""}
+                  onVerify={(token) => setCaptchaToken(token)}
+                  ref={captchaRef}
+                  theme={isDarkMode ? "dark" : "light"}
+                />
+              </div>
 
               <div className="flex justify-between items-center">
                 <button
