@@ -13,20 +13,30 @@ interface HintButtonProps {
 
 export default function HintButton({ onUseHint }: HintButtonProps) {
   const [availableHints, setAvailableHints] = useState(1);
-  const { currentMovie, displayTitle, incorrectLetters } = useGameStore();
+  const { currentMovie, displayTitle, incorrectLetters, gameStatus } =
+    useGameStore();
+
+  // Reset hint availability when a new game starts
+  useEffect(() => {
+    // When the game status is "playing", that means a new game has started
+    if (gameStatus === "playing") {
+      setAvailableHints(1);
+    }
+  }, [gameStatus]);
 
   // Load available hints from localStorage
   useEffect(() => {
     const loadHints = () => {
-      const progress = getLocalProgress();
-      setAvailableHints(progress.hintsAvailable);
+      const hintsStr = localStorage.getItem("reel-fling-hints");
+      const hints = hintsStr ? parseInt(hintsStr, 10) : 1;
+      setAvailableHints(hints);
     };
 
     loadHints();
 
     // Set up an event listener for storage changes
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "reel-fling-hints" || e.key === "reel-fling-progress") {
+      if (e.key === "reel-fling-hints") {
         loadHints();
       }
     };
@@ -76,14 +86,8 @@ export default function HintButton({ onUseHint }: HintButtonProps) {
     }
 
     // Use the hint
-    const hintUsed = useHint();
-    if (!hintUsed) {
-      toast.error("Failed to use hint");
-      return;
-    }
-
-    // Set available hints to 0 - only one hint per game
     setAvailableHints(0);
+    localStorage.setItem("reel-fling-hints", "0");
     onUseHint(hintLetter);
 
     toast.success(`Hint used: The letter "${hintLetter}" is in the title`, {

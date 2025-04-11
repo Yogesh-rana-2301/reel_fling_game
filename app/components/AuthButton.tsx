@@ -172,13 +172,26 @@ const AuthButton = () => {
                 : "bg-light-primary border border-light-secondary"
             }`}
           >
-            <h2
-              className={`text-2xl font-bold mb-4 ${
-                isDarkMode ? "text-white" : "text-light-text"
-              }`}
-            >
-              {isLogin ? "Login" : "Sign Up"}
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2
+                className={`text-2xl font-bold ${
+                  isDarkMode ? "text-white" : "text-light-text"
+                }`}
+              >
+                {isLogin ? "Login" : "Sign Up"}
+              </h2>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className={`p-2 rounded-full ${
+                  isDarkMode
+                    ? "text-gray-400 hover:text-white hover:bg-gray-700"
+                    : "text-light-text hover:text-light-accent hover:bg-light-secondary"
+                }`}
+                aria-label="Close modal"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={isLogin ? handleLogin : handleSignup}>
               {!isLogin && (
@@ -273,18 +286,6 @@ const AuthButton = () => {
                 </button>
               </div>
             </form>
-
-            <button
-              onClick={() => setShowAuthModal(false)}
-              className={`absolute top-3 right-3 p-2 rounded-full ${
-                isDarkMode
-                  ? "text-gray-400 hover:text-white hover:bg-gray-700"
-                  : "text-light-text hover:text-light-accent hover:bg-light-secondary"
-              }`}
-              aria-label="Close modal"
-            >
-              <FaTimes className="w-5 h-5" />
-            </button>
           </div>
         </div>
       )}

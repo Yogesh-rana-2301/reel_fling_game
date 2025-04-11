@@ -339,52 +339,107 @@ export default function Game() {
             className="text-center mb-8"
           >
             <div className="flex flex-wrap justify-center gap-2 mb-6">
-              {displayTitle.split("").map((letter, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`letter-box ${
-                    letter !== "_" ? "correct-letter" : ""
-                  }`}
-                >
-                  {letter === "_" ? " " : letter}
-                </motion.div>
-              ))}
+              {displayTitle.split("").map((letter, index) => {
+                // Handle spaces in the movie title
+                if (currentMovie?.title.charAt(index) === " ") {
+                  return (
+                    <div
+                      key={index}
+                      className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center"
+                    ></div>
+                  );
+                }
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`letter-box ${
+                      letter !== "_" ? "correct-letter" : ""
+                    }`}
+                  >
+                    {letter === "_" ? " " : letter}
+                  </motion.div>
+                );
+              })}
             </div>
 
             {/* Word Guesser with strike-through effect for FILMQUIZ */}
             <div className="flex flex-col items-center justify-center">
               <p className="text-sm text-gray-400 mb-1">Remaining Chances:</p>
               <div className="word-guesser">
-                {wordGuesser.split("").map((letter, index) => (
-                  <span
-                    key={index}
-                    className={index < strikes ? "strike-through" : ""}
-                  >
-                    {letter}
-                  </span>
-                ))}
+                {difficulty === "easy" && (
+                  <>
+                    {wordGuesser.split("").map((letter, index) => (
+                      <span
+                        key={index}
+                        className={index < strikes ? "strike-through" : ""}
+                      >
+                        {letter}
+                      </span>
+                    ))}
+                  </>
+                )}
+                {difficulty === "medium" && (
+                  <>
+                    <span className="strike-through">F</span>
+                    <span className="strike-through">I</span>
+                    <span className="strike-through">L</span>
+                    {wordGuesser
+                      .substring(3)
+                      .split("")
+                      .map((letter, index) => (
+                        <span
+                          key={index}
+                          className={index < strikes ? "strike-through" : ""}
+                        >
+                          {letter}
+                        </span>
+                      ))}
+                  </>
+                )}
+                {difficulty === "hard" && (
+                  <>
+                    <span className="strike-through">F</span>
+                    <span className="strike-through">I</span>
+                    <span className="strike-through">L</span>
+                    <span className="strike-through">M</span>
+                    {wordGuesser
+                      .substring(4)
+                      .split("")
+                      .map((letter, index) => (
+                        <span
+                          key={index}
+                          className={index < strikes ? "strike-through" : ""}
+                        >
+                          {letter}
+                        </span>
+                      ))}
+                  </>
+                )}
               </div>
               <p className="text-xs text-gray-400 mt-2">
-                {wordGuesser.length - strikes} chances left
+                {maxStrikes - strikes} chances left
               </p>
             </div>
 
-            {/* Show incorrect letters */}
-            {incorrectLetters.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm text-gray-400 mb-1">Incorrect letters:</p>
-                <div className="flex justify-center flex-wrap max-w-xs mx-auto">
-                  {incorrectLetters.map((letter) => (
+            {/* Show incorrect letters - always visible */}
+            <div className="mt-4">
+              <p className="text-sm text-gray-400 mb-1">Incorrect letters:</p>
+              <div className="flex justify-center flex-wrap max-w-xs mx-auto">
+                {incorrectLetters.length > 0 ? (
+                  incorrectLetters.map((letter) => (
                     <span key={letter} className="incorrect-letter">
                       {letter}
                     </span>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-500">None yet</span>
+                )}
               </div>
-            )}
+            </div>
           </motion.div>
 
           {/* Game result screen */}
