@@ -8,9 +8,9 @@
     @apply bg-dark-primary text-white min-h-screen overflow-x-hidden;
   }
 
-  /* Light Mode - Updated with new color scheme */
+  /* Light Mode - Updated with new gradient background and white text */
   .light body {
-    @apply bg-light-primary text-light-text min-h-screen overflow-x-hidden;
+    @apply bg-light-gradient text-light-text min-h-screen overflow-x-hidden;
   }
 }
 
@@ -72,7 +72,7 @@
   }
 
   .light .letter-box {
-    @apply bg-light-secondary border-light-accent;
+    @apply bg-gray-100 border-accent;
   }
 
   .incorrect-letter {
@@ -86,6 +86,23 @@
 
   .light .incorrect-letter {
     @apply text-light-error;
+  }
+
+  /* Color for correct and incorrect letter boxes */
+  .correct-letter {
+    @apply bg-success bg-opacity-20 border-success;
+  }
+
+  .wrong-letter {
+    @apply bg-danger bg-opacity-20 border-danger;
+  }
+
+  .light .correct-letter {
+    @apply bg-light-success bg-opacity-20 border-light-success;
+  }
+
+  .light .wrong-letter {
+    @apply bg-light-error bg-opacity-20 border-light-error;
   }
 
   .word-guesser {
@@ -144,7 +161,7 @@
   }
 
   .light .keyboard-btn {
-    @apply bg-light-secondary text-light-text hover:bg-light-accent hover:text-white;
+    @apply bg-green-600 text-white hover:bg-light-accent hover:text-white;
   }
 
   .genre-btn {

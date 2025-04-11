@@ -32,7 +32,7 @@ const DEFAULT_PROGRESS: LocalGameProgress = {
   highestStreak: 0,
   level: 1,
   xp: 0,
-  hintsAvailable: 2,
+  hintsAvailable: 1,
   playedMovies: [],
   dailyChallenge: {
     lastCompleted: null,
@@ -129,10 +129,9 @@ export const updateLocalProgressAfterGame = (
   // Calculate new level
   const newLevel = calculateLevel(progress.xp);
 
-  // If level increased, add hints
+  // If level increased, always reset to 1 hint available
   if (newLevel > progress.level) {
-    const levelsGained = newLevel - progress.level;
-    progress.hintsAvailable += levelsGained;
+    progress.hintsAvailable = 1;
 
     // Update hints in local storage separately
     localStorage.setItem(

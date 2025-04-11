@@ -6,7 +6,6 @@ import Game from "@/app/components/Game";
 import HowToPlay from "@/app/components/HowToPlay";
 import Leaderboard from "@/app/components/Leaderboard";
 import AnimatedBackground from "@/app/components/AnimatedBackground";
-import ThemeToggle from "@/app/components/ThemeToggle";
 import AuthButton from "@/app/components/AuthButton";
 import { useGameStore } from "@/app/store/gameStore";
 import Link from "next/link";
@@ -18,11 +17,6 @@ export default function Home() {
   return (
     <div className="h-screen flex items-center justify-center relative">
       <AnimatedBackground />
-
-      {/* Theme toggle button - top left */}
-      <div className="absolute top-4 left-4 z-20">
-        <ThemeToggle />
-      </div>
 
       {/* Auth button - top right */}
       <div className="absolute top-4 right-4 z-20">

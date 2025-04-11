@@ -17,11 +17,11 @@ module.exports = {
         warning: "#f59e0b", // amber
         info: "#3b82f6", // blue
 
-        // Light mode colors - updated as per requirements
+        // Light mode colors - updated as per new requirements
         light: {
-          primary: "#F9F9F9", // Soft white with slight gray tint
-          secondary: "#E0E0E0", // Light gray for borders/dividers
-          text: "#333333", // Dark gray for high contrast
+          primary: "#AAC4E7", // Start of gradient
+          secondary: "#F24455", // Second color in gradient
+          text: "#b6b8b6", // White text
           accent: "#FF7A24", // Vibrant orange
           success: "#4CAF50", // Green for success/confirmation
           error: "#E53935", // Bright red for errors/warnings
@@ -42,6 +42,9 @@ module.exports = {
           "0%": { width: "0%" },
           "100%": { width: "100%" },
         },
+      },
+      backgroundImage: {
+        "light-gradient": "linear-gradient(to bottom, #0F1520, #0B2B26)",
       },
     },
   },

@@ -12,8 +12,7 @@ interface HintButtonProps {
 }
 
 export default function HintButton({ onUseHint }: HintButtonProps) {
-  const [availableHints, setAvailableHints] = useState(2);
-  const [cooldown, setCooldown] = useState(false);
+  const [availableHints, setAvailableHints] = useState(1);
   const { currentMovie, displayTitle, incorrectLetters } = useGameStore();
 
   // Load available hints from localStorage
@@ -66,12 +65,7 @@ export default function HintButton({ onUseHint }: HintButtonProps) {
 
   const handleHint = () => {
     if (availableHints <= 0) {
-      toast.error("No hints available!");
-      return;
-    }
-
-    if (cooldown) {
-      toast.info("Hint on cooldown");
+      toast.error("No hints available! You get 1 hint per game.");
       return;
     }
 
@@ -88,15 +82,12 @@ export default function HintButton({ onUseHint }: HintButtonProps) {
       return;
     }
 
-    setAvailableHints((prev) => prev - 1);
+    // Set available hints to 0 - only one hint per game
+    setAvailableHints(0);
     onUseHint(hintLetter);
 
-    // Set cooldown
-    setCooldown(true);
-    setTimeout(() => setCooldown(false), 10000); // 10 second cooldown
-
     toast.success(`Hint used: The letter "${hintLetter}" is in the title`, {
-      description: `${availableHints - 1} hints remaining`,
+      description: "No hints remaining",
     });
   };
 
@@ -106,15 +97,15 @@ export default function HintButton({ onUseHint }: HintButtonProps) {
         onClick={handleHint}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        disabled={availableHints <= 0 || cooldown}
+        disabled={availableHints <= 0}
         className={`flex items-center gap-2 px-4 py-2 rounded-md ${
-          availableHints <= 0 || cooldown
+          availableHints <= 0
             ? "bg-gray-600 cursor-not-allowed opacity-70"
             : "bg-yellow-600 hover:bg-yellow-500"
         }`}
       >
         <FaLightbulb className="text-yellow-300" />
-        <span>Use Hint {availableHints > 0 && `(${availableHints} left)`}</span>
+        <span>Use Hint {availableHints > 0 && "(1 available)"}</span>
       </motion.button>
     </div>
   );

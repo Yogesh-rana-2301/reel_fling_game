@@ -131,7 +131,30 @@ export default function Game() {
   };
 
   return (
-    <div className="game-container">
+    <div className="game-container relative">
+      {/* Quit/Restart button - moved to top left */}
+      {gameStatus === "playing" && (
+        <div className="absolute top-4 left-4">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={resetGame}
+            className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md flex items-center gap-1 text-sm"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              fill="currentColor"
+              viewBox="0 0 16 16"
+            >
+              <path d="M8 3a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a5 5 0 0 0-5-5z" />
+            </svg>
+            Quit
+          </motion.button>
+        </div>
+      )}
+
       {/* Header section */}
       <div className="mb-8 text-center">
         <motion.h1
@@ -295,104 +318,76 @@ export default function Game() {
         </motion.div>
       )}
 
-      {/* Active gameplay (shown during playing, won, or lost states) */}
-      {(gameStatus === "playing" ||
-        gameStatus === "won" ||
-        gameStatus === "lost") && (
+      {/* Main game area (when a game is running) */}
+      {gameStatus !== "idle" && (
         <div className="space-y-8">
-          {/* Movie description (only shown during gameplay) */}
+          {/* Display the movie title with blanks for consonants */}
           {gameStatus === "playing" && currentMovie?.description && (
-            <div className="bg-secondary bg-opacity-40 p-4 rounded-lg max-w-2xl mx-auto mb-2">
+            <div
+              className="bg-secondary p-4 rounded-lg max-w-2xl mx-auto 
+            mb-2"
+            >
               <h3 className="text-lg font-semibold mb-2">Movie Hint:</h3>
               <p className="text-sm text-gray-300 italic">
                 "{currentMovie.description}"
               </p>
             </div>
           )}
-
-          {/* Display movie title with vowels revealed */}
-          <div className="flex flex-wrap justify-center gap-2">
-            {displayTitle.split("").map((letter, index) => (
-              <motion.div
-                key={index}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: index * 0.05, type: "spring" }}
-                className={`letter-box ${
-                  letter === " " ? "border-transparent bg-transparent" : ""
-                }`}
-              >
-                {letter !== " " ? letter : ""}
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Display incorrect letters */}
-          <div className="text-center">
-            <p className="text-sm text-gray-400 mb-1">Incorrect Letters:</p>
-            <div className="min-h-8 flex justify-center">
-              {incorrectLetters.map((letter, index) => (
-                <motion.span
-                  key={index}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="incorrect-letter"
-                >
-                  {letter}
-                </motion.span>
-              ))}
-            </div>
-          </div>
-
-          {/* Word Guesser with strike-through effect - restore old format */}
-          <div className="flex flex-col items-center justify-center">
-            <p className="text-sm text-gray-400 mb-1">Remaining Chances:</p>
-            <div className="flex items-center justify-center mb-2">
-              {difficulty === "easy" && (
-                <div className="text-3xl font-bold tracking-wider flex flex-wrap justify-center">
-                  <span>FILMQUIZ</span>
-                </div>
-              )}
-              {difficulty === "medium" && (
-                <div className="text-3xl font-bold tracking-wider flex flex-wrap justify-center">
-                  <span className="line-through">FIL</span>
-                  <span>MQUIZ</span>
-                </div>
-              )}
-              {difficulty === "hard" && (
-                <div className="text-3xl font-bold tracking-wider flex flex-wrap justify-center">
-                  <span>QUIZ</span>
-                </div>
-              )}
-            </div>
-
-            {/* Visual strike counter */}
-            <div className="flex justify-center space-x-2 mb-2">
-              {Array.from({ length: maxStrikes }).map((_, index) => (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center mb-8"
+          >
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {displayTitle.split("").map((letter, index) => (
                 <motion.div
                   key={index}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ delay: index * 0.1, type: "spring" }}
-                  className={`w-3 h-3 rounded-full ${
-                    index < strikes ? "bg-red-500" : "bg-green-500"
+                  transition={{ delay: index * 0.05 }}
+                  className={`letter-box ${
+                    letter !== "_" ? "correct-letter" : ""
                   }`}
-                />
+                >
+                  {letter === "_" ? " " : letter}
+                </motion.div>
               ))}
             </div>
 
-            {difficulty === "easy" && (
-              <p className="text-xs text-gray-400 mt-2">2 Hints Available</p>
-            )}
-            {difficulty === "medium" && (
-              <p className="text-xs text-gray-400 mt-2">2 Hints Available</p>
-            )}
-            {difficulty === "hard" && (
-              <p className="text-xs text-gray-400 mt-2">1 Hint Available</p>
-            )}
-          </div>
+            {/* Word Guesser with strike-through effect for FILMQUIZ */}
+            <div className="flex flex-col items-center justify-center">
+              <p className="text-sm text-gray-400 mb-1">Remaining Chances:</p>
+              <div className="word-guesser">
+                {wordGuesser.split("").map((letter, index) => (
+                  <span
+                    key={index}
+                    className={index < strikes ? "strike-through" : ""}
+                  >
+                    {letter}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                {wordGuesser.length - strikes} chances left
+              </p>
+            </div>
 
-          {/* Game over message */}
+            {/* Show incorrect letters */}
+            {incorrectLetters.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-400 mb-1">Incorrect letters:</p>
+                <div className="flex justify-center flex-wrap max-w-xs mx-auto">
+                  {incorrectLetters.map((letter) => (
+                    <span key={letter} className="incorrect-letter">
+                      {letter}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Game result screen */}
           <AnimatePresence>
             {(gameStatus === "won" || gameStatus === "lost") && (
               <motion.div
@@ -461,29 +456,8 @@ export default function Game() {
           {/* Keyboard for letter guessing (only shown during active gameplay) */}
           {gameStatus === "playing" && (
             <>
-              {/* Hint button - already exists */}
+              {/* Hint button */}
               <HintButton onUseHint={handleUseHint} />
-
-              {/* Quit/Restart button */}
-              <div className="flex justify-center mb-4">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={resetGame}
-                  className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md flex items-center gap-2"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 3a5 5 0 0 0-5 5v1h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a6 6 0 1 1 12 0v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1V8a5 5 0 0 0-5-5z" />
-                  </svg>
-                  Quit Game
-                </motion.button>
-              </div>
 
               {/* Existing keyboard */}
               <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
@@ -502,8 +476,8 @@ export default function Game() {
                       className={`keyboard-btn ${
                         isGuessed
                           ? incorrectLetters.includes(letter)
-                            ? "bg-danger cursor-not-allowed opacity-60"
-                            : "bg-success cursor-not-allowed opacity-60"
+                            ? "wrong-letter cursor-not-allowed opacity-60"
+                            : "correct-letter cursor-not-allowed opacity-60"
                           : "bg-accent hover:bg-opacity-90"
                       }`}
                     >

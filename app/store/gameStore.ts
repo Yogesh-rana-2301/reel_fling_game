@@ -50,10 +50,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   displayTitle: "",
   incorrectLetters: [],
   guessedLetters: [],
-  wordGuesser: "",
+  wordGuesser: "FILMQUIZ",
   strikes: 0,
   maxStrikes: 8,
-  availableHints: 2,
+  availableHints: 1,
   gameStatus: "idle",
 
   // Initial UI state
@@ -69,14 +69,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setDifficulty: (difficulty: "easy" | "medium" | "hard") => {
     let maxStrikes = 8;
-    let availableHints = 2;
+    const availableHints = 1;
 
     if (difficulty === "medium") {
       maxStrikes = 5;
-      availableHints = 2;
     } else if (difficulty === "hard") {
       maxStrikes = 4;
-      availableHints = 1;
     }
 
     set({
@@ -108,14 +106,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       .join("");
 
     let maxStrikes = 8;
-    let availableHints = 2;
+    const availableHints = 1;
 
     if (difficulty === "medium") {
       maxStrikes = 5;
-      availableHints = 2;
     } else if (difficulty === "hard") {
       maxStrikes = 4;
-      availableHints = 1;
     }
 
     localStorage.setItem("reel-fling-hints", availableHints.toString());
@@ -124,7 +120,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       displayTitle,
       incorrectLetters: [],
       guessedLetters: [],
-      wordGuesser: "",
+      wordGuesser: "FILMQUIZ",
       strikes: 0,
       maxStrikes,
       availableHints,
