@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Tell Next.js this route is dynamic
+export const dynamic = "force-dynamic";
+
 /**
  * Serverless function to proxy TMDB API requests
  * This helps bypass ISP blocks by fetching data server-side
