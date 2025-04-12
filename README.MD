@@ -34,9 +34,9 @@ Visit the live game at: [https://reel-fling.vercel.app](https://reel-fling-game.
 
 ### Single Player
 
-- **Easy Mode**: More visible letters and 2 hints available
-- **Medium Mode**: Fewer visible letters and 2 hints available
-- **Hard Mode**: Minimal visible letters and 1 hint available
+- **Easy Mode**: More common movies with 8 guesses and 1hints available.
+- **Medium Mode**: Less common movies with 5 guesses and 1 hints available.
+- **Hard Mode**: Least common plus newer movies with 4 guesses and 1 hint available.
 
 ### Multiplayer
 
