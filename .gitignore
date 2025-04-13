@@ -3,6 +3,8 @@
 /.pnp
 .pnp.js
 .log
+/scripts
+
 
 /scripts/node_modules
 # testing
