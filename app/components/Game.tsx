@@ -15,7 +15,7 @@ import { getRandomMockMovie } from "@/app/lib/mockData";
 import Image from "next/image";
 import Confetti from "react-confetti";
 import { toast } from "sonner";
-import { getRandomTMDBMovie } from "@/app/lib/tmdb";
+import tmdbApi, { getRandomTMDBMovie } from "@/app/lib/tmdb";
 import HintButton from "@/app/components/HintButton";
 import { updateLocalProgressAfterGame } from "@/app/lib/localProgress";
 import Leaderboard from "@/app/components/Leaderboard";

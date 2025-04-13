@@ -1,7 +1,9 @@
-// TMDb API Proxy - Vercel Serverless Function
-// This function securely proxies requests to the TMDb API
+/**
+ * TMDb API Proxy - Vercel Serverless Function
+ * This proxy handles requests to TMDb API with parameter mapping and caching
+ */
 
-// Genre mappings
+// Genre mappings (TMDb genre IDs)
 const GENRE_MAPPINGS = {
   all: null,
   action: 28,
@@ -23,22 +25,20 @@ const GENRE_MAPPINGS = {
   thriller: 53,
   war: 10752,
   western: 37,
-  adult: [10749, 18], // Romance + Drama with filters
 };
 
 // Industry mappings
 const INDUSTRY_MAPPINGS = {
+  all: null,
   world: null,
   hollywood: { region: "US", with_original_language: "en" },
   bollywood: { with_original_language: "hi" },
-  korean: { language: "ko-KR" },
-  japanese: { language: "ja-JP" },
-  tollywood: { with_original_language: "te" },
-  kollywood: { with_original_language: "ta" },
-  nollywood: { with_original_language: "yo" },
-  french: { language: "fr-FR" },
-  spanish: { language: "es-ES" },
-  chinese: { language: "zh-CN" },
+  korean: { language: "ko-KR", with_original_language: "ko" },
+  japanese: { language: "ja-JP", with_original_language: "ja" },
+  french: { language: "fr-FR", with_original_language: "fr" },
+  spanish: { language: "es-ES", with_original_language: "es" },
+  chinese: { language: "zh-CN", with_original_language: "zh" },
+  // Add more industries as needed
 };
 
 // Difficulty to popularity mapping
@@ -48,6 +48,24 @@ const DIFFICULTY_MAPPINGS = {
   hard: { popularity_lte: 20 },
 };
 
+// Default response if TMDb fails (10 popular movies)
+const DEFAULT_MOVIES = [
+  {
+    id: 299534,
+    title: "Avengers: Endgame",
+    poster_path: "/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+    release_date: "2019-04-24",
+    genre_ids: [12, 878, 28],
+    popularity: 100,
+    overview:
+      "After the devastating events of Avengers: Infinity War, the universe is in ruins. With the help of remaining allies, the Avengers assemble once more in order to reverse Thanos' actions and restore balance to the universe.",
+  },
+  // Add more default movies here
+];
+
+/**
+ * TMDb API proxy handler
+ */
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader("Access-Control-Allow-Credentials", true);
@@ -73,74 +91,71 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get the API key from environment variables
+    const apiKey = process.env.TMDB_API_KEY;
+
+    if (!apiKey) {
+      console.error("TMDB API key is not configured");
+      return res.status(500).json({
+        error: "TMDB API key is not configured",
+        results: DEFAULT_MOVIES,
+      });
+    }
+
     // Extract query parameters
     const {
       difficulty = "medium",
       genre = "all",
-      industry = "world",
-      recent = false,
-      page = 1,
+      industry = "all",
+      recent = "false",
+      page = "1",
+      query = "",
+      endpoint = "discover/movie",
     } = req.query;
-
-    // Validate query parameters
-    if (!Object.keys(DIFFICULTY_MAPPINGS).includes(difficulty.toLowerCase())) {
-      return res.status(400).json({ error: "Invalid difficulty parameter" });
-    }
-
-    if (!Object.keys(GENRE_MAPPINGS).includes(genre.toLowerCase())) {
-      return res.status(400).json({ error: "Invalid genre parameter" });
-    }
-
-    if (!Object.keys(INDUSTRY_MAPPINGS).includes(industry.toLowerCase())) {
-      return res.status(400).json({ error: "Invalid industry parameter" });
-    }
 
     // Build TMDb API request parameters
     let params = new URLSearchParams({
-      api_key: process.env.TMDB_API_KEY,
+      api_key: apiKey,
       language: "en-US",
-      include_adult: genre.toLowerCase() === "adult" ? "true" : "false",
+      include_adult: "false",
       sort_by: "popularity.desc",
-      page: page.toString(),
+      page: String(page),
     });
 
-    // Add genre filter
-    const genreId = GENRE_MAPPINGS[genre.toLowerCase()];
-    if (genreId) {
-      if (Array.isArray(genreId)) {
-        // For "adult" or other multi-genre filters
-        params.append("with_genres", genreId.join(","));
-      } else {
+    // If it's a search request
+    if (query && endpoint.includes("search")) {
+      params.append("query", query);
+    } else {
+      // Add difficulty filter (based on popularity)
+      const difficultyParams = DIFFICULTY_MAPPINGS[difficulty.toLowerCase()];
+      if (difficultyParams) {
+        Object.entries(difficultyParams).forEach(([key, value]) => {
+          params.append(key, value);
+        });
+      }
+
+      // Add genre filter
+      const genreId = GENRE_MAPPINGS[genre.toLowerCase()];
+      if (genreId) {
         params.append("with_genres", genreId.toString());
+      }
+
+      // Add industry filter
+      const industryParams = INDUSTRY_MAPPINGS[industry.toLowerCase()];
+      if (industryParams) {
+        Object.entries(industryParams).forEach(([key, value]) => {
+          params.append(key, value);
+        });
+      }
+
+      // Add recent filter if requested (movies from the last 5 years)
+      if (recent === "true") {
+        const currentYear = new Date().getFullYear();
+        params.append("primary_release_date.gte", `${currentYear - 5}-01-01`);
       }
     }
 
-    // Add industry filter
-    const industryParams = INDUSTRY_MAPPINGS[industry.toLowerCase()];
-    if (industryParams) {
-      Object.entries(industryParams).forEach(([key, value]) => {
-        params.append(key, value);
-      });
-    }
-
-    // Add difficulty filter (based on popularity)
-    const difficultyParams = DIFFICULTY_MAPPINGS[difficulty.toLowerCase()];
-    if (difficultyParams) {
-      Object.entries(difficultyParams).forEach(([key, value]) => {
-        params.append(key, value);
-      });
-    }
-
-    // Add recent filter if requested
-    if (recent === "true" || recent === true) {
-      const currentYear = new Date().getFullYear();
-      params.append("primary_release_date.gte", `${currentYear - 5}-01-01`);
-    }
-
-    // Determine endpoint based on genre
-    const endpoint = "discover/movie";
-
-    // Make request to TMDb API
+    // Construct the TMDb API URL
     const tmdbUrl = `https://api.themoviedb.org/3/${endpoint}?${params.toString()}`;
     console.log(
       `Fetching from TMDb: ${tmdbUrl.replace(
@@ -149,16 +164,38 @@ export default async function handler(req, res) {
       )}`
     );
 
-    const tmdbResponse = await fetch(tmdbUrl);
-    const data = await tmdbResponse.json();
+    // Make request to TMDb API
+    const response = await fetch(tmdbUrl, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      timeout: 5000, // 5 second timeout
+    });
 
-    // Return the data with proper headers
-    res.status(200).json(data);
+    if (!response.ok) {
+      throw new Error(`TMDb API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Set cache control headers (1 hour for normal requests, 10 minutes for search)
+    const cacheTime = endpoint.includes("search") ? 600 : 3600;
+    res.setHeader(
+      "Cache-Control",
+      `s-maxage=${cacheTime}, stale-while-revalidate`
+    );
+
+    // Return the data
+    return res.status(200).json(data);
   } catch (error) {
     console.error("TMDb API proxy error:", error);
-    res.status(500).json({
+
+    // Return default data if TMDb fails
+    return res.status(500).json({
       error: "Failed to fetch data from TMDb",
       message: error.message,
+      results: DEFAULT_MOVIES,
     });
   }
 }

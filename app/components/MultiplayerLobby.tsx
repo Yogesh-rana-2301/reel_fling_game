@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useMultiplayerStore } from "@/app/store/multiplayerStore";
 import { useSupabase } from "@/app/providers/SupabaseProvider";
 import { toast } from "sonner";
-import { getRandomTMDBMovie } from "@/app/lib/tmdb";
+import tmdbApi, { getRandomTMDBMovie } from "@/app/lib/tmdb";
 import { getRandomMockMovie } from "@/app/lib/mockData";
 import LobbyChat from "./LobbyChat";
 import {

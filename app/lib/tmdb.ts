@@ -59,6 +59,52 @@ export const fetchMoviesFromTMDB = async (
   }
 
   try {
+    // Try to use our proxy API first
+    try {
+      const params = new URLSearchParams({
+        difficulty: "medium",
+        genre: genre.toLowerCase(),
+        industry: industry.toLowerCase(),
+        recent: "false",
+        page: "1",
+      });
+
+      const proxyResponse = await fetch(
+        `${API_BASE_URL}/api/tmdb?${params.toString()}`
+      );
+      if (proxyResponse.ok) {
+        const data = await proxyResponse.json();
+
+        if (data.results?.length) {
+          // Convert TMDB movies to our app's movie format
+          return data.results.map(
+            (movie: TMDBMovie): Movie => ({
+              id: movie.id,
+              title: movie.title.toUpperCase(),
+              poster_path: movie.poster_path,
+              release_year: movie.release_date
+                ? new Date(movie.release_date).getFullYear()
+                : 0,
+              genre:
+                movie.genre_ids && movie.genre_ids.length > 0
+                  ? genreMap[movie.genre_ids[0]] || "Other"
+                  : "Other",
+              industry: industry,
+              difficulty: getDifficulty(movie.popularity),
+              description:
+                movie.overview || "No description available for this movie.",
+            })
+          );
+        }
+      }
+    } catch (proxyError) {
+      console.warn(
+        "Error using API proxy, falling back to direct TMDB call:",
+        proxyError
+      );
+    }
+
+    // Fallback to direct API call if proxy fails
     let url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=en-US&sort_by=popularity.desc&page=1`;
 
     // Add genre filter if specified
@@ -106,52 +152,6 @@ export const fetchMoviesFromTMDB = async (
       }
     }
 
-    // Try to use our proxy API first
-    try {
-      const params = new URLSearchParams({
-        difficulty: "medium",
-        genre: genre.toLowerCase(),
-        industry: industry.toLowerCase(),
-        recent: "false",
-        page: "1",
-      });
-
-      const proxyResponse = await fetch(
-        `${API_BASE_URL}/api/tmdb?${params.toString()}`
-      );
-      if (proxyResponse.ok) {
-        const data = await proxyResponse.json();
-
-        if (data.results?.length) {
-          // Convert TMDB movies to our app's movie format
-          return data.results.map(
-            (movie: TMDBMovie): Movie => ({
-              id: movie.id,
-              title: movie.title.toUpperCase(),
-              poster_path: movie.poster_path,
-              release_year: movie.release_date
-                ? new Date(movie.release_date).getFullYear()
-                : 0,
-              genre:
-                movie.genre_ids.length > 0
-                  ? genreMap[movie.genre_ids[0]] || "Other"
-                  : "Other",
-              industry: industry,
-              difficulty: getDifficulty(movie.popularity),
-              description:
-                movie.overview || "No description available for this movie.",
-            })
-          );
-        }
-      }
-    } catch (proxyError) {
-      console.warn(
-        "Error using API proxy, falling back to direct TMDB call:",
-        proxyError
-      );
-    }
-
-    // Fallback to direct API call if proxy fails
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`TMDB API error: ${response.status}`);
@@ -173,7 +173,7 @@ export const fetchMoviesFromTMDB = async (
           ? new Date(movie.release_date).getFullYear()
           : 0,
         genre:
-          movie.genre_ids.length > 0
+          movie.genre_ids && movie.genre_ids.length > 0
             ? genreMap[movie.genre_ids[0]] || "Other"
             : "Other",
         industry: industry,
@@ -191,48 +191,54 @@ export const fetchMoviesFromTMDB = async (
 /**
  * Get a random movie from TMDB based on genre, industry and difficulty
  */
-export const getRandomTMDBMovie = async (
+export function getRandomTMDBMovie(
   genre: string = "All",
   industry: string = "Hollywood",
   difficulty: "easy" | "medium" | "hard" = "medium"
-): Promise<Movie | null> => {
-  try {
-    const movies = await fetchMoviesFromTMDB(genre, industry);
+): Promise<Movie | null> {
+  return new Promise(async (resolve) => {
+    try {
+      const movies = await fetchMoviesFromTMDB(genre, industry);
 
-    if (!movies.length) {
-      return null;
+      if (!movies.length) {
+        resolve(null);
+        return;
+      }
+
+      // Filter by difficulty if specified
+      const filteredMovies = movies.filter(
+        (movie) => movie.difficulty === difficulty
+      );
+
+      // If no movies match the difficulty, use all fetched movies
+      const moviesPool = filteredMovies.length > 0 ? filteredMovies : movies;
+
+      // Get a random movie
+      const randomIndex = Math.floor(Math.random() * moviesPool.length);
+      const movie = moviesPool[randomIndex];
+
+      resolve(movie);
+    } catch (error) {
+      console.error("Error getting random TMDB movie:", error);
+      resolve(null);
     }
-
-    // Filter by difficulty if specified
-    const filteredMovies = movies.filter(
-      (movie) => movie.difficulty === difficulty
-    );
-
-    // If no movies match the difficulty, use all fetched movies
-    const moviesPool = filteredMovies.length > 0 ? filteredMovies : movies;
-
-    // Get a random movie
-    const randomIndex = Math.floor(Math.random() * moviesPool.length);
-    const movie = moviesPool[randomIndex];
-
-    return movie;
-  } catch (error) {
-    console.error("Error getting random TMDB movie:", error);
-    return null;
-  }
-};
+  });
+}
 
 /**
  * Get full URL for a movie poster
  */
 export const getMoviePoster = (posterPath: string | null): string => {
-  if (!posterPath) return "/images/no-poster.png"; // You should add a default poster image
+  if (!posterPath) return "/images/no-poster.png"; // Fallback poster image
   return `https://image.tmdb.org/t/p/w500${posterPath}`;
 };
 
-// Export a default function for backward compatibility
-export default {
+// Create an object with all exports for compatibility
+const tmdbApi = {
   fetchMoviesFromTMDB,
   getRandomTMDBMovie,
   getMoviePoster,
 };
+
+// Export as default and named exports
+export default tmdbApi;
