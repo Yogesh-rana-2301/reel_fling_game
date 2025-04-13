@@ -98,9 +98,9 @@ export const fetchMoviesFromTMDB = async (
       (movie: SupabaseMovie): Movie => ({
         id: movie.id,
         title: movie.title.toUpperCase(),
-        // @ts-ignore - We're handling undefined case properly here
+        // @ts-ignore - Store the full poster URL directly
         poster_path: isValidPosterUrl(movie.poster_url)
-          ? movie.poster_url.split("/").pop()
+          ? movie.poster_url
           : null,
         release_year: movie.release_year || 0,
         genre: movie.genre || "Other",
@@ -126,6 +126,16 @@ export function getRandomTMDBMovie(
 ): Promise<Movie | null> {
   return new Promise(async (resolve) => {
     try {
+      if (!supabaseClient) {
+        console.warn("Supabase client not initialized");
+        resolve(null);
+        return;
+      }
+
+      console.log(
+        `Fetching movie with genre: ${genre}, industry: ${industry}, difficulty: ${difficulty}`
+      );
+
       // Build the query
       let query = supabaseClient.from("movies").select("*");
 
@@ -134,8 +144,10 @@ export function getRandomTMDBMovie(
         query = query.eq("genre", genre);
       }
 
-      if (industry !== "All" && industry !== "Hollywood") {
-        query = query.eq("industry", industry);
+      // Make sure industry filter is case-insensitive
+      if (industry !== "All") {
+        // Use ilike for case-insensitive matching
+        query = query.ilike("industry", `%${industry}%`);
       }
 
       if (difficulty) {
@@ -149,14 +161,39 @@ export function getRandomTMDBMovie(
         throw error;
       }
 
-      if (!data || !data.length) {
-        resolve(null);
-        return;
+      let moviesData = data || [];
+
+      if (!moviesData.length) {
+        console.log(
+          `No movies found with the given filters. Trying with fewer filters...`
+        );
+
+        // Try again with just the industry filter
+        const { data: fallbackData, error: fallbackError } =
+          await supabaseClient
+            .from("movies")
+            .select("*")
+            .eq("industry", industry)
+            .limit(50);
+
+        if (fallbackError || !fallbackData || !fallbackData.length) {
+          console.log("Still no results, returning null");
+          resolve(null);
+          return;
+        }
+
+        moviesData = fallbackData;
       }
 
+      console.log(`Found ${moviesData.length} movies matching criteria`);
+
       // Get a random movie
-      const randomIndex = Math.floor(Math.random() * data.length);
-      const supabaseMovie = data[randomIndex] as SupabaseMovie;
+      const randomIndex = Math.floor(Math.random() * moviesData.length);
+      const supabaseMovie = moviesData[randomIndex] as SupabaseMovie;
+
+      console.log(
+        `Selected movie: ${supabaseMovie.title} (${supabaseMovie.industry})`
+      );
 
       // Convert to app's Movie format using helper function
       const movie = convertSupabaseMovieToAppMovie(supabaseMovie);
@@ -173,7 +210,7 @@ export function getRandomTMDBMovie(
  */
 function convertSupabaseMovieToAppMovie(supabaseMovie: SupabaseMovie): Movie {
   // Use the type guard to validate the poster URL
-  // @ts-ignore - We're handling undefined case properly with the type guard
+  // @ts-ignore - Store the full poster URL directly
   const posterPath = isValidPosterUrl(supabaseMovie.poster_url)
     ? supabaseMovie.poster_url
     : null;
@@ -197,8 +234,8 @@ function convertSupabaseMovieToAppMovie(supabaseMovie: SupabaseMovie): Movie {
 export const getMoviePoster = (posterPath: string | null): string => {
   if (!posterPath) return "/images/no-poster.png"; // Fallback poster image
 
-  // If it's already a complete URL, return it
-  if (posterPath.startsWith("http")) {
+  // If it's a Supabase URL, use it directly
+  if (posterPath.includes("supabase") || posterPath.startsWith("http")) {
     return posterPath;
   }
 
