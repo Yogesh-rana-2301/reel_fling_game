@@ -1,8 +1,14 @@
 import { Movie } from "./supabase";
+import { createClient } from "@supabase/supabase-js";
 
-// TMDB API integration
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let supabaseClient: any = null;
+
+if (supabaseUrl && supabaseKey) {
+  supabaseClient = createClient(supabaseUrl, supabaseKey);
+}
 
 // Map genre IDs to names
 const genreMap: Record<number, string> = {
@@ -34,137 +40,178 @@ const getDifficulty = (popularity: number): "easy" | "medium" | "hard" => {
   return "hard";
 };
 
-// Add a new interface for TMDB API responses
-interface TMDBMovie {
+// Interface for the movie data from Supabase
+interface SupabaseMovie {
   id: number;
   title: string;
-  poster_path: string | null;
-  release_date: string;
-  genre_ids: number[];
-  popularity: number;
-  overview: string;
+  description: string;
+  poster_url: string | null | undefined;
+  release_year: number | null;
+  genre: string;
+  industry: string;
+  difficulty: string;
 }
 
+// Add a type guard function
+function isValidPosterUrl(url: string | null | undefined): url is string {
+  return typeof url === "string" && url.length > 0;
+}
+
+/**
+ * Fetch movies from Supabase database
+ */
 export const fetchMoviesFromTMDB = async (
   genre: string = "All",
   industry: string = "Hollywood"
 ): Promise<Movie[]> => {
-  if (!TMDB_API_KEY) {
-    console.warn("TMDB API key not found, using mock data instead");
+  if (!supabaseClient) {
+    console.warn("Supabase client not initialized, using mock data instead");
     return [];
   }
 
   try {
-    let url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=en-US&sort_by=popularity.desc&page=1`;
+    // Build the query
+    let query = supabaseClient.from("movies").select("*").order("id");
 
-    // Add genre filter if specified
+    // Add filters
     if (genre !== "All") {
-      const genreId = Object.entries(genreMap).find(
-        ([_, name]) => name === genre
-      )?.[0];
-      if (genreId) {
-        url += `&with_genres=${genreId}`;
-      }
+      query = query.eq("genre", genre);
     }
 
-    // Handle industry filter
-    if (industry !== "Hollywood" && industry !== "All") {
-      // Map industries to region codes or language codes
-      let regionCode = "";
-      switch (industry) {
-        case "Bollywood":
-          regionCode = "IN";
-          url += "&with_original_language=hi";
-          break;
-        case "Korean":
-          regionCode = "KR";
-          url += "&with_original_language=ko";
-          break;
-        case "Japanese":
-          regionCode = "JP";
-          url += "&with_original_language=ja";
-          break;
-        case "French":
-          regionCode = "FR";
-          url += "&with_original_language=fr";
-          break;
-        case "Spanish":
-          url += "&with_original_language=es";
-          break;
-        case "Chinese Cinema":
-          url += "&with_original_language=zh";
-          break;
-        // Add other industries as needed
-      }
-
-      if (regionCode) {
-        url += `&region=${regionCode}`;
-      }
+    if (industry !== "All" && industry !== "Hollywood") {
+      query = query.eq("industry", industry);
     }
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.status}`);
+    // Execute query
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
     }
 
-    const data = await response.json();
-
-    if (!data.results?.length) {
+    if (!data || !data.length) {
       return [];
     }
 
-    // Convert TMDB movies to our app's movie format
-    return data.results.map(
-      (movie: TMDBMovie): Movie => ({
+    // Convert to our app's Movie format
+    return data.map(
+      (movie: SupabaseMovie): Movie => ({
         id: movie.id,
         title: movie.title.toUpperCase(),
-        poster_path: movie.poster_path,
-        release_year: movie.release_date
-          ? new Date(movie.release_date).getFullYear()
-          : 0,
-        genre:
-          movie.genre_ids.length > 0
-            ? genreMap[movie.genre_ids[0]] || "Other"
-            : "Other",
-        industry: industry,
-        difficulty: getDifficulty(movie.popularity),
+        // @ts-ignore - We're handling undefined case properly here
+        poster_path: isValidPosterUrl(movie.poster_url)
+          ? movie.poster_url.split("/").pop()
+          : null,
+        release_year: movie.release_year || 0,
+        genre: movie.genre || "Other",
+        industry: movie.industry || "Hollywood",
+        difficulty: movie.difficulty as "easy" | "medium" | "hard",
         description:
-          movie.overview || "No description available for this movie.",
+          movie.description || "No description available for this movie.",
       })
     );
   } catch (error) {
-    console.error("Error fetching movies from TMDB:", error);
+    console.error("Error fetching movies from Supabase:", error);
     return [];
   }
 };
 
-export const getRandomTMDBMovie = async (
+/**
+ * Get a random movie from Supabase based on genre, industry and difficulty
+ */
+export function getRandomTMDBMovie(
   genre: string = "All",
   industry: string = "Hollywood",
   difficulty: "easy" | "medium" | "hard" = "medium"
-): Promise<Movie | null> => {
-  const movies = await fetchMoviesFromTMDB(genre, industry);
+): Promise<Movie | null> {
+  return new Promise(async (resolve) => {
+    try {
+      // Build the query
+      let query = supabaseClient.from("movies").select("*");
 
-  if (!movies.length) {
-    return null;
+      // Add filters
+      if (genre !== "All") {
+        query = query.eq("genre", genre);
+      }
+
+      if (industry !== "All" && industry !== "Hollywood") {
+        query = query.eq("industry", industry);
+      }
+
+      if (difficulty) {
+        query = query.eq("difficulty", difficulty);
+      }
+
+      // Execute query
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data || !data.length) {
+        resolve(null);
+        return;
+      }
+
+      // Get a random movie
+      const randomIndex = Math.floor(Math.random() * data.length);
+      const supabaseMovie = data[randomIndex] as SupabaseMovie;
+
+      // Convert to app's Movie format using helper function
+      const movie = convertSupabaseMovieToAppMovie(supabaseMovie);
+      resolve(movie);
+    } catch (error) {
+      console.error("Error getting random movie from Supabase:", error);
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Helper function to convert from Supabase movie format to app Movie format
+ */
+function convertSupabaseMovieToAppMovie(supabaseMovie: SupabaseMovie): Movie {
+  // Use the type guard to validate the poster URL
+  // @ts-ignore - We're handling undefined case properly with the type guard
+  const posterPath = isValidPosterUrl(supabaseMovie.poster_url)
+    ? supabaseMovie.poster_url
+    : null;
+
+  return {
+    id: supabaseMovie.id,
+    title: supabaseMovie.title.toUpperCase(),
+    poster_path: posterPath,
+    release_year: supabaseMovie.release_year || 0,
+    genre: supabaseMovie.genre || "Other",
+    industry: supabaseMovie.industry || "Hollywood",
+    difficulty: supabaseMovie.difficulty as "easy" | "medium" | "hard",
+    description:
+      supabaseMovie.description || "No description available for this movie.",
+  };
+}
+
+/**
+ * Get full URL for a movie poster
+ */
+export const getMoviePoster = (posterPath: string | null): string => {
+  if (!posterPath) return "/images/no-poster.png"; // Fallback poster image
+
+  // If it's already a complete URL, return it
+  if (posterPath.startsWith("http")) {
+    return posterPath;
   }
 
-  // Filter by difficulty if specified
-  const filteredMovies = movies.filter(
-    (movie) => movie.difficulty === difficulty
-  );
-
-  // If no movies match the difficulty, use all fetched movies
-  const moviesPool = filteredMovies.length > 0 ? filteredMovies : movies;
-
-  // Get a random movie
-  const randomIndex = Math.floor(Math.random() * moviesPool.length);
-  const movie = moviesPool[randomIndex];
-
-  return movie;
-};
-
-export const getMoviePoster = (posterPath: string | null): string => {
-  if (!posterPath) return "/images/no-poster.png"; // You should add a default poster image
+  // Otherwise, assume it's a TMDb path
   return `https://image.tmdb.org/t/p/w500${posterPath}`;
 };
+
+// Create an object with all exports for compatibility
+const tmdbApi = {
+  fetchMoviesFromTMDB,
+  getRandomTMDBMovie,
+  getMoviePoster,
+};
+
+// Export as default and named exports
+export default tmdbApi;

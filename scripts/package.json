@@ -1,0 +1,20 @@
+{
+  "name": "tmdb-to-supabase",
+  "version": "1.0.0",
+  "description": "Script to fetch TMDb movies and store them in Supabase",
+  "main": "fetchMovies.js",
+  "scripts": {
+    "start": "node fetchMovies.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.4.0",
+    "ansi-colors": "^4.1.3",
+    "axios": "^0.27.2",
+    "cli-progress": "^3.11.2",
+    "dotenv": "^16.5.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "private": true
+}
