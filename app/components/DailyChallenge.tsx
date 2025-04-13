@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSupabase } from "@/app/providers/SupabaseProvider";
 import { useGameStore } from "@/app/store/gameStore";
-import tmdbApi, { getRandomTMDBMovie } from "@/app/lib/tmdb";
+import { getRandomTMDBMovie } from "@/app/lib/tmdb";
 import { getRandomMockMovie } from "@/app/lib/mockData";
 import { toast } from "sonner";
 import { FaCalendarAlt, FaLock, FaCheck } from "react-icons/fa";
