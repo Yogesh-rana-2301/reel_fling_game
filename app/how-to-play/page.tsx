@@ -120,8 +120,8 @@ export default function HowToPlayPage() {
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>More popular movies</li>
-                  <li>Single player: uses "QUIZ" (4 chances)</li>
-                  <li>Multiplayer: 3 minutes time limit</li>
+                  <li>Single player: uses "FILMQUIZ" (8 chances)</li>
+                  <li>Multiplayer: 2 minutes time limit</li>
                 </ul>
               </div>
 
@@ -131,8 +131,8 @@ export default function HowToPlayPage() {
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Moderately popular movies</li>
-                  <li>Single player: uses "FILMQUIZ" (8 chances)</li>
-                  <li>Multiplayer: 2 minutes time limit</li>
+                  <li>Single player: uses "MQUIZ" (5 chances)</li>
+                  <li>Multiplayer: 1 minutes time limit</li>
                 </ul>
               </div>
 
@@ -142,8 +142,8 @@ export default function HowToPlayPage() {
                 </h3>
                 <ul className="list-disc list-inside space-y-1">
                   <li>Less popular or indie movies</li>
-                  <li>Single player: starts with 3 strikes</li>
-                  <li>Multiplayer: 1 minute time limit</li>
+                  <li>Single player: starts with 4 strikes</li>
+                  <li>Multiplayer: 30 seconds time limit</li>
                 </ul>
               </div>
             </div>
