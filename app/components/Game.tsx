@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BsQuestionCircleFill, BsTrophy } from "react-icons/bs";
+import {
+  BsQuestionCircleFill,
+  BsTrophy,
+  BsCheckCircleFill,
+  BsXCircleFill,
+} from "react-icons/bs";
 import { useGameStore } from "@/app/store/gameStore";
 import { useSupabase } from "@/app/providers/SupabaseProvider";
 import {
@@ -19,6 +24,7 @@ import { getRandomTMDBMovie } from "@/app/lib/tmdb";
 import HintButton from "@/app/components/HintButton";
 import { updateLocalProgressAfterGame } from "@/app/lib/localProgress";
 import Leaderboard from "@/app/components/Leaderboard";
+import FixedImage from "@/app/components/FixedImage";
 
 export default function Game() {
   const {
@@ -49,6 +55,7 @@ export default function Game() {
   const { supabase, user } = useSupabase();
 
   const [gameSessionId, setGameSessionId] = useState<string | null>(null);
+  const [posterLoaded, setPosterLoaded] = useState(false);
 
   useEffect(() => {
     if (!currentMovie) return;
@@ -513,38 +520,21 @@ export default function Game() {
 
                 {/* Movie poster */}
                 {showMoviePoster && currentMovie && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="my-4 flex justify-center"
+                  <div
+                    className={`flex justify-center w-full max-w-xs mx-auto my-6 transition-opacity ${
+                      posterLoaded ? "opacity-100" : "opacity-0"
+                    }`}
                   >
-                    {currentMovie.poster_path ? (
-                      <div className="relative w-48 h-72 rounded-lg overflow-hidden border-2 border-accent">
-                        <Image
-                          src={`https://image.tmdb.org/t/p/w500${currentMovie.poster_path}`}
-                          alt={currentMovie.title}
-                          fill
-                          style={{ objectFit: "cover" }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-48 h-72 rounded-lg border-2 border-accent flex items-center justify-center bg-primary">
-                        <div className="text-center p-4">
-                          <p className="text-sm text-gray-400 mb-2">
-                            No poster available
-                          </p>
-                          <p className="font-semibold text-accent">
-                            {currentMovie.title}
-                          </p>
-                          {currentMovie.release_year && (
-                            <p className="text-sm mt-1">
-                              ({currentMovie.release_year})
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
+                    <FixedImage
+                      src={currentMovie.poster_path || "/images/no-poster.png"}
+                      alt={currentMovie.title}
+                      width={250}
+                      height={375}
+                      className="rounded-lg shadow-lg"
+                      priority
+                      onLoad={() => setPosterLoaded(true)}
+                    />
+                  </div>
                 )}
 
                 <button className="btn-primary mt-4" onClick={resetGame}>

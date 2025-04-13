@@ -234,19 +234,18 @@ function convertSupabaseMovieToAppMovie(supabaseMovie: SupabaseMovie): Movie {
 export const getMoviePoster = (posterPath: string | null): string => {
   if (!posterPath) return "/images/no-poster.png"; // Fallback poster image
 
-  // Check if the URL is malformed with double prefixes
-  if (posterPath.includes("https://image.tmdb.org/t/p/w500http")) {
-    // Fix malformed URL by removing the TMDb prefix
-    return posterPath.replace("https://image.tmdb.org/t/p/w500", "");
-  }
-
-  // If it's already a complete URL, use it directly
-  if (posterPath.includes("supabase") || posterPath.includes("://")) {
+  // If it's already a Supabase URL, use it directly
+  if (posterPath.includes("supabase")) {
     return posterPath;
   }
 
-  // Otherwise, assume it's a TMDb path
-  return `https://image.tmdb.org/t/p/w500${posterPath}`;
+  // If it's any external URL that's not from Supabase, return fallback
+  if (posterPath.includes("://")) {
+    return "/images/no-poster.png";
+  }
+
+  // If it's a path without URL, assume it's a Supabase path
+  return posterPath;
 };
 
 // Create an object with all exports for compatibility
@@ -258,3 +257,5 @@ const tmdbApi = {
 
 // Export as default and named exports
 export default tmdbApi;
+
+// This file needs to be examined

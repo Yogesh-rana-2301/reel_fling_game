@@ -9,6 +9,48 @@ import { toast } from "sonner";
 import { safeSupabaseOperation } from "@/app/lib/supabaseHelpers";
 import Confetti from "react-confetti";
 import LobbyChat from "./LobbyChat";
+import FixedImage from "@/app/components/FixedImage";
+
+// Inline Keyboard component
+const Keyboard = ({
+  guessedLetters,
+  incorrectLetters,
+  onGuess,
+}: {
+  guessedLetters: string[];
+  incorrectLetters: string[];
+  onGuess: (letter: string) => void;
+}) => {
+  const consonants = "BCDFGHJKLMNPQRSTVWXYZ";
+
+  return (
+    <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mb-4">
+      {consonants.split("").map((letter) => {
+        const isGuessed =
+          incorrectLetters.includes(letter) || guessedLetters.includes(letter);
+
+        return (
+          <motion.button
+            key={letter}
+            whileHover={!isGuessed ? { scale: 1.1 } : {}}
+            whileTap={!isGuessed ? { scale: 0.9 } : {}}
+            disabled={isGuessed}
+            onClick={() => onGuess(letter)}
+            className={`keyboard-btn text-xs w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center ${
+              isGuessed
+                ? incorrectLetters.includes(letter)
+                  ? "bg-red-900 text-red-300 opacity-60 cursor-not-allowed"
+                  : "bg-green-900 text-green-300 opacity-60 cursor-not-allowed"
+                : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            {letter}
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+};
 
 export default function MultiplayerGame() {
   const {
@@ -33,6 +75,7 @@ export default function MultiplayerGame() {
     players.find((p) => p.id === players[0]?.id)
   );
   const [showLeaderboard, setShowLeaderboard] = useState(true);
+  const [showPoster, setShowPoster] = useState(false);
 
   // Get active player ID (first player in the list is this client)
   useEffect(() => {
@@ -170,12 +213,12 @@ export default function MultiplayerGame() {
               {currentMovie.poster_path && (
                 <div className="flex justify-center">
                   <div className="relative w-40 h-60 md:w-48 md:h-72 rounded-lg overflow-hidden border-2 border-accent">
-                    <Image
-                      src={`https://image.tmdb.org/t/p/w500${currentMovie.poster_path}`}
+                    <FixedImage
+                      src={currentMovie.poster_path || "/images/no-poster.png"}
                       alt={currentMovie.title}
-                      fill
-                      sizes="(max-width: 768px) 160px, 192px"
-                      style={{ objectFit: "cover" }}
+                      width={192}
+                      height={288}
+                      className="rounded-lg shadow-lg"
                     />
                   </div>
                 </div>
@@ -471,33 +514,11 @@ export default function MultiplayerGame() {
             {/* Keyboard */}
             {activePlayer.gameStatus === "playing" && (
               <div>
-                {/* Consonant keyboard */}
-                <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mb-4">
-                  {consonants.split("").map((letter) => {
-                    const isGuessed =
-                      activePlayer.incorrectLetters.includes(letter) ||
-                      activePlayer.guessedLetters.includes(letter);
-
-                    return (
-                      <motion.button
-                        key={letter}
-                        whileHover={!isGuessed ? { scale: 1.1 } : {}}
-                        whileTap={!isGuessed ? { scale: 0.9 } : {}}
-                        disabled={isGuessed}
-                        onClick={() => handleGuessLetter(letter)}
-                        className={`keyboard-btn text-xs w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center ${
-                          isGuessed
-                            ? activePlayer.incorrectLetters.includes(letter)
-                              ? "bg-red-900 text-red-300 opacity-60 cursor-not-allowed"
-                              : "bg-green-900 text-green-300 opacity-60 cursor-not-allowed"
-                            : "bg-gray-700 hover:bg-gray-600"
-                        }`}
-                      >
-                        {letter}
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                <Keyboard
+                  guessedLetters={activePlayer.guessedLetters}
+                  incorrectLetters={activePlayer.incorrectLetters}
+                  onGuess={handleGuessLetter}
+                />
               </div>
             )}
 
