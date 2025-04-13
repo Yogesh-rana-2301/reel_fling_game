@@ -77,16 +77,16 @@ export default function HowToPlay() {
             <h3 className="text-xl font-semibold mb-2">Difficulty Levels</h3>
             <ul className="list-disc list-inside space-y-1">
               <li>
-                <span className="font-medium text-green-400">Easy:</span> Uses
-                "QUIZ" instead of "FILMQUIZ" giving you fewer chances.
+                <span className="font-medium text-green-400">Easy:</span> More
+                common movies with 8 guesses and 1 hint available.
               </li>
               <li>
                 <span className="font-medium text-yellow-400">Medium:</span>{" "}
-                Standard difficulty with "FILMQUIZ".
+                Less common movies with 5 guesses and 1 hint available.
               </li>
               <li>
-                <span className="font-medium text-red-400">Hard:</span> Starts
-                with 3 letters already struck through in "FILMQUIZ".
+                <span className="font-medium text-red-400">Hard:</span> Least
+                common plus newer movies with 4 guesses and 1 hint available.
               </li>
             </ul>
           </section>
