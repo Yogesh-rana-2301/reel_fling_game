@@ -18,7 +18,7 @@
     "@vercel/speed-insights": "^1.2.0",
     "framer-motion": "^10.16.16",
     "next": "14.0.4",
-    "react": "^18.2.0",
+    "react": "^19.1.1",
     "react-confetti": "^6.1.0",
     "react-dom": "^18.2.0",
     "react-hcaptcha": "^0.1.1",
@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.4",
-    "@types/react": "^18.2.45",
+    "@types/react": "^19.1.12",
     "@types/react-dom": "^18.2.17",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.55.0",
