@@ -7,7 +7,7 @@ Want to watch new movies, but tired of searching for new ones everytime? Or do y
 
 Reel Fling is an interactive movie guessing game where players test their knowledge of films by guessing movie titles letter by letter. The game features both single-player and multiplayer modes, with real-time functionality for a competitive experience. It also helps them if they are on a hunt for new movies to watch.
 
-## 🎮 Features
+## Features
 
 - **Single-player Mode**: Guess movie titles with customizable difficulty levels
 - **Multiplayer Mode**: Create or join lobbies to play with friends in real-time
@@ -18,11 +18,11 @@ Reel Fling is an interactive movie guessing game where players test their knowle
 - **Responsive Design**: Play on desktop, tablet, or mobile devices
 - **Secure Authentication**: User accounts with hCaptcha protection
 
-## 🚀 Live Demo
+## Live Demo
 
 Visit the live game at: [https://reel-fling.vercel.app](https://reel-fling-game.vercel.app)
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **Frontend**: Next.js, React, TypeScript, Tailwind CSS, Framer Motion
 - **Backend**: Supabase (PostgreSQL, Authentication, Realtime)
@@ -30,7 +30,7 @@ Visit the live game at: [https://reel-fling.vercel.app](https://reel-fling-game.
 - **Deployment**: Vercel
 - **Security**: hCaptcha for bot protection
 
-## 🎲 Game Modes
+## Game Modes
 
 ### Single Player
 
@@ -45,7 +45,7 @@ Visit the live game at: [https://reel-fling.vercel.app](https://reel-fling-game.
 - **Real-time Scoring**: Compete for the fastest completion times
 - **Host Controls**: Kick inactive players, start games, and configure settings
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -55,11 +55,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👏 Acknowledgements
+## Acknowledgements
 
 - [TMDB](https://www.themoviedb.org/) for their extensive movie database
 - [Supabase](https://supabase.com/) for the backend infrastructure
